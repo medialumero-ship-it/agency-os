@@ -6,8 +6,10 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 
 - **Open it:** use the link your admin sends you (bookmark it, and add it to your phone's home screen if you like).
 - **Editors:** pick the **Editor** tab and sign in with your name and the password your admin gave you. Change your password in **⚙ Settings** after your first sign-in.
+  - On **My Projects**, click **Add min** to enter the minutes you edited. Minutes lock once the video is sent to the client (status *Client Review* or *Done*). Ask the admin if a number needs fixing.
+  - The **Leaderboard** ranks editors by minutes of videos delivered to clients this month.
 - **Clients:** pick the **Client** tab and sign in with your brand name and password.
-- Changes save automatically and show up for everyone straight away.
+- Changes save automatically.
 
 ## For the admin
 
@@ -17,20 +19,21 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 - **Reset someone's password:** ⚙ Settings → type a new one next to their name → Update. Passwords are stored scrambled, so the old one can't be shown.
 - After 10 wrong passwords in a row, that login is paused for 15 minutes.
 
-## Invoices (admin only)
+## Client rates, payments and invoices (admin only)
 
-**Client payments**, at the top of the tab:
-- When a project is marked **Done** on the Editors board, its revenue (in US dollars) counts as **unpaid** for that client.
-- When the client pays, open the client and click **✓ Paid** on the project, or **Mark all unpaid as paid**. If you sent an invoice built with **＋ Add unpaid finished projects**, marking that invoice paid marks its projects paid too.
-- The totals show **Unpaid**, **Paid this month** and **Paid all time**.
+**Client rates.** On the **Clients** page, set what each client pays under 🔒 **Charges**: **per minute** (for example $2/min) or **flat per video**. Only you can see this.
+
+**Automatic amounts.** When a video goes to the client (status **Client Review** or **Done**), its amount is worked out automatically (the client's rate × the editor's minutes, or the flat price). It appears as **unpaid** for that client in **Invoices** and counts in Finance revenue. You don't type revenue yourself. If you do type a revenue by hand on a project, your number is kept.
+
+**Client payments**, at the top of the Invoices tab:
+- **Unpaid**, **Paid this month** and **Paid all time**, with a row per client. Open a client to see each video and mark it **✓ Paid**, or use **Mark all unpaid as paid**.
+- Paid videos keep their amount even if you change the client's rate later.
+
+**⚡ Create an invoice from recent work:** pick the client and **the last 7 days**, **14 days**, **month** or **all unpaid work**. The invoice is filled in with every unpaid video from that period, priced from the client's rate. Check it, then **Save**, **Download PDF** or **Email to client**. Marking that invoice paid marks its videos paid.
 
 **Invoices**
-
-- Open the **Invoices** tab, then click **＋ New invoice**. Fill in the client, the lines and your payment details. The preview on the right shows exactly what the client will get.
-- **＋ Add unpaid finished projects** adds that client's *Done* projects that haven't been paid yet.
-- **⬇ Download PDF** saves the invoice to your computer.
-- **✉ Email to client** sends the PDF straight to the client's inbox once email sending is set up (see Technical notes). Until then, it downloads the PDF and opens your own email app with the message written for you; just attach the PDF and press Send.
-- Your business details, payment info and each client's email are remembered for next time. Mark invoices as **paid** to keep the totals at the top correct.
+- **＋ New invoice** builds one by hand. **＋ Add unpaid finished projects** adds that client's unpaid videos.
+- **⬇ Download PDF** saves it. **✉ Email to client** sends it once email sending is set up (see Technical notes). Until then it downloads the PDF and opens your own email app with the message written for you.
 
 ## Work Log (admin only)
 
@@ -54,14 +57,21 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 
 | | Admin | Editor | Client |
 |---|---|---|---|
-| Project board | ✅ all | ✅ all (edits their own) | only their own projects |
-| Revenue, points, who's assigned | ✅ edit | view only | – |
-| Finance, salaries, expenses, leads | ✅ | – | – |
-| Invoices, Work Log (minutes, thumbnails, scripts, pay) | ✅ | – | – |
+| Project board | ✅ all | ✅ all projects (edits their own) | only their own projects |
+| Minutes | ✅ edit | their own (locked once sent), and totals on the leaderboard | – |
 | Which client a project is for | ✅ | – | their own |
+| Client rates, revenue, unpaid/paid, invoices | ✅ | – | – |
+| Finance, salaries, expenses, leads, Work Log pay | ✅ | – | – |
 | Logins | ✅ | their own | their own |
 
-These rules are enforced by the database, not just hidden on screen.
+These rules are enforced by the database, not just hidden on screen. Editors and clients never receive the hidden information at all, even through the browser's developer tools.
+
+**Other protections**
+- Passwords are scrambled and kept in a table no one can read, not even the admin's browser.
+- After 10 wrong passwords, that login pauses for 15 minutes.
+- Logins last 30 days. Resetting someone's password or deleting their account signs them out everywhere at once.
+- Anything editors or clients type is checked by the database (IDs, statuses, dates, minutes) and shown as plain text, so it can't run code on the admin's screen.
+- The page only talks to your own database, and other websites can't embed it.
 
 ## Technical notes
 

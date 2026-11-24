@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://uxzcfocvkqlxhosdkxec.supabase.co wss://uxzcfocvkqlxhosdkxec.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
 <title>Agency OS — CRM</title>
 <!-- Replace with your favicon: <link rel="icon" type="image/png" href="your-favicon.png"> -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -696,6 +699,7 @@
   .ranking-name-wrap { flex: 1; min-width: 0; }
   .ranking-name { font-weight: 600; font-size: 14px; }
   .ranking-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+  .ranking-unit { font-size: 0.55em; font-weight: 600; opacity: 0.7; }
   .ranking-points { font-weight: 800; font-size: 18px; color: var(--green); letter-spacing: -0.5px; }
   .empty-rank { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
   .you-tag { font-size: 12px; color: var(--green); margin-left: 6px; letter-spacing: 0; }
@@ -1104,6 +1108,9 @@
   .inv-stat b { font-size:20px; color:var(--text); }
   .inv-empty { text-align:center; padding:60px 20px; background:var(--surface); border:1px dashed var(--border-bright); border-radius:var(--radius-lg); color:var(--text-dim); font-size:14px; line-height:1.6; }
   .inv-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .inv-auto-row { display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) auto; gap:0 12px; align-items:end; margin-bottom:6px; }
+  .inv-auto-row .btn { height:42px; margin-bottom:12px; }
+  @media (max-width: 640px) { .inv-auto-row { grid-template-columns: 1fr; } }
   .pay-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
   .pay-client { border-bottom:1px solid var(--border); } .pay-client:last-child { border-bottom:0; }
   .pay-row { display:grid; grid-template-columns: minmax(0,1fr) 130px 130px 24px; gap:12px; align-items:center; padding:14px 18px; cursor:pointer; }
@@ -1173,6 +1180,9 @@
     .inv-item { grid-template-columns: 1fr 1fr 30px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); }
     .inv-item input:first-child { grid-column: 1 / -1; } .inv-item-amt { grid-column: 1 / 3; text-align:left; }
   }
+  .cr-ctl { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:13px; color:var(--text-dim); flex-wrap:wrap; }
+  .cr-ctl select, .cr-ctl input { padding:5px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; font-size:13px; background:#fff; color:var(--text); }
+  .cr-ctl input { width:80px; text-align:right; }
   .client-pill { display:inline-flex; align-items:center; padding:5px 10px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-weight:600; font-size:13px; white-space:nowrap; }
   /* ===== Work log ===== */
   .wl-lock { background: var(--accent-soft); color: var(--text-dim); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; }
@@ -1453,6 +1463,9 @@
     { min:61,max:85,points:22 },{ min:86,max:120,points:30 },{ min:121,max:160,points:40 },
     { min:161,max:220,points:55 },{ min:221,max:300,points:75 }
   ];
+  // Minutes edited drive the leaderboard; a video counts once it has gone to the client
+  function rowMin(r) { const m = Number(r && r.minutes); return isFinite(m) && m > 0 ? Math.round(m * 10) / 10 : 0; }
+  function isDelivered(r) { return !!r && (r.status === 'Done' || r.status === 'Client Review'); }
   function getTiers() { return (data && data.pointTiers && data.pointTiers.length) ? data.pointTiers : POINT_TIERS; }
   function pointsFromRevenue(rev) {
     rev = Number(rev) || 0;
@@ -1477,7 +1490,7 @@
     { id:'editor', label:'Editor', type:'editor', adminOnly:false, locked:true, editorEditable:false },
     { id:'client', label:'Client', type:'client', adminOnly:true, locked:true, editorEditable:false },
     { id:'revenue', label:'Revenue', type:'revenue', adminOnly:true, locked:true, editorEditable:false },
-    { id:'points', label:'Points', type:'points', adminOnly:false, locked:true, editorEditable:false },
+    { id:'minutes', label:'Minutes', type:'minutes', adminOnly:false, locked:true, editorEditable:true },
     { id:'status', label:'Status', type:'status', adminOnly:false, locked:true, editorEditable:true },
     { id:'deadline', label:'Deadline', type:'date', adminOnly:false, locked:true, editorEditable:false },
     { id:'finalVideo', label:'Video Link', type:'links', adminOnly:false, locked:true, editorEditable:true },
@@ -1562,7 +1575,7 @@
     revenue:'revenue', revenue_gross:'revenueGross', revenue_source:'revenueSource',
     points:'points', point_calc:'pointCalc', status:'status', deadline:'deadline',
     frameio:'frameio', final_video:'finalVideo', notes:'notes', rolled_from:'rolledFrom',
-    created_at:'createdAt', created_by:'createdBy'
+    created_at:'createdAt', created_by:'createdBy', minutes:'minutes', minutes_locked:'minutesLocked'
   };
   const EXPENSE_FIELDS = {
     id:'id', period:'period', name:'name', usd:'usd', taka:'taka', bonus:'bonus', notes:'notes',
@@ -1645,7 +1658,7 @@
         isAdmin() ? db.from('settings').select('*').eq('id', 'main').maybeSingle() : db.rpc('crm_public_settings'),
         db.from('period_settings').select('*'),
         db.from('columns').select('*').order('sort_order'),
-        isEditor() ? db.rpc('crm_editor_projects') : db.from('projects').select('*'),
+        isEditor() ? db.rpc('crm_editor_projects') : isClient() ? db.rpc('crm_client_projects') : db.from('projects').select('*'),
         db.from('teams').select('*').order('sort_order'),
         db.from('individuals').select('*').order('sort_order'),
         db.from('editor_accounts').select('*'),
@@ -1863,16 +1876,20 @@
       if (rowDiff.upsert.length) {
         const dbRows = rowDiff.upsert.map(r => {
           const d = _projectToDb(r);
+          delete d.minutes_locked;
+          if (d.minutes === '' || d.minutes === undefined) d.minutes = null;
           d.updated_at = now;
           return d;
         });
         if (isEditor()) {
           ops.push(db.rpc('crm_editor_save', { p_rows: dbRows.map(d => { const { client, ...rest } = d; return rest; }) }));
+        } else if (isClient()) {
+          ops.push(db.rpc('crm_client_save', { p_rows: dbRows }));
         } else {
           ops.push(db.from('projects').upsert(dbRows, { onConflict: 'id' }));
         }
       }
-      if (rowDiff.remove.length && !isEditor()) ops.push(db.from('projects').delete().in('id', rowDiff.remove));
+      if (rowDiff.remove.length && isAdmin()) ops.push(db.from('projects').delete().in('id', rowDiff.remove));
 
       // 5. Teams
       const teamDiff = _diffByKey(data.teams||[], _lastSaved.teams||[], 'id');
@@ -1986,6 +2003,7 @@
         }
       }
       _lastSaved = _snap();
+      if ((isEditor() || isClient()) && rowDiff.upsert.length) await resyncMyProjects();
     } catch(e) {
       console.error('Save failed:', e);
       showError('Save failed: ' + (e.message||'unknown'));
@@ -2200,23 +2218,37 @@
     }
   }
 
+  // Editors/clients: after saving, take the database's version (it may have refused or adjusted a change)
+  async function resyncMyProjects() {
+    const { data: list, error } = await db.rpc(isEditor() ? 'crm_editor_projects' : 'crm_client_projects');
+    if (error || !Array.isArray(list)) return;
+    // Never overwrite a change the person made while this was loading; the next refresh will catch up
+    if (pendingSave || JSON.stringify(data.rows) !== JSON.stringify(_lastSaved.rows)) return;
+    const fresh = list.map(r => { const row = _dbToJs(r, PROJECT_FIELDS); if (r.custom_fields && typeof r.custom_fields === 'object') Object.assign(row, r.custom_fields); return row; });
+    if (JSON.stringify(fresh) === JSON.stringify(data.rows)) return;
+    // keep the same row objects where possible so open editors keep working
+    fresh.forEach(f => { const cur = data.rows.find(x => x.id === f.id); if (cur) { Object.keys(cur).forEach(k => { if (!(k in f)) delete cur[k]; }); Object.assign(cur, f); } });
+    data.rows = fresh.map(f => data.rows.find(x => x.id === f.id) || f);
+    _lastSaved.rows = JSON.parse(JSON.stringify(data.rows)); _queueRender();
+  }
   let _editorPoll = null;
   async function refreshEditorProjects() {
-    if (!isEditor() || isSaving || pendingSave || !_lastSaved) return;
+    if (!(isEditor() || isClient()) || isSaving || pendingSave || !_lastSaved) return;
     if (document.querySelector('.cell-input') || document.querySelector('.dropdown-menu')) return;
     if (JSON.stringify(data.rows) !== JSON.stringify(_lastSaved.rows)) return;   // unsaved local change
-    const { data: list, error } = await db.rpc('crm_editor_projects');
+    const { data: list, error } = await db.rpc(isEditor() ? 'crm_editor_projects' : 'crm_client_projects');
     if (error || !Array.isArray(list)) return;
     const fresh = list.map(r => { const row = _dbToJs(r, PROJECT_FIELDS); if (r.custom_fields && typeof r.custom_fields === 'object') Object.assign(row, r.custom_fields); return row; });
     if (JSON.stringify(fresh) === JSON.stringify(data.rows)) return;
     data.rows = fresh; _lastSaved.rows = JSON.parse(JSON.stringify(fresh)); _queueRender();
   }
   function startAutoRefresh() {
-    if (isEditor() && !_editorPoll) _editorPoll = setInterval(refreshEditorProjects, 20000);
+    if ((isEditor() || isClient()) && !_editorPoll) _editorPoll = setInterval(refreshEditorProjects, 20000);
     if (_realtimeChannel) return;
+    // Login tables are not broadcast (security), so they must not be requested here:
+    // asking for a table that isn't broadcast makes the server refuse the whole channel.
     const tables = ['projects','columns','expenses','leads','teams','individuals',
-                    'settings','period_settings','editor_accounts','client_accounts',
-                    'project_bin','expense_bin'];
+                    'settings','period_settings','project_bin','expense_bin'];
     let ch = db.channel('crm-sync');
     tables.forEach(t => {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: t }, p => _onRemote(t, p));
@@ -2693,7 +2725,7 @@
       try {
         const lastShown = parseInt(localStorage.getItem('robot_intro_last') || '0');
         const threeDays = 3 * 24 * 60 * 60 * 1000;
-        if (Date.now() - lastShown > threeDays) {
+        if (AI_ROBOT_ENABLED && Date.now() - lastShown > threeDays) {
           setTimeout(() => {
             const ov = document.createElement('div'); ov.id = 'robotIntroOverlay'; document.body.appendChild(ov);
             const card = document.createElement('div'); card.id = 'robotIntroCard';
@@ -3430,11 +3462,11 @@
     const editors = editorOrder.map(name => {
       const mine = rows.filter(r => r.editor === name);
       const active = mine.filter(r => r.status && r.status !== 'Done');
-      const done = mine.filter(r => r.status === 'Done');
+      const done = mine.filter(isDelivered);
       // Active projects with deadlines
       const activeWithDl = active.filter(r => r.deadline).sort((a,b) => a.deadline.localeCompare(b.deadline));
       const lastDl = activeWithDl.length ? activeWithDl[activeWithDl.length-1].deadline : null;
-      const points = done.reduce((s,r) => s + (r.points!=null?Number(r.points):pointsFromRevenue(r.revenue)), 0);
+      const points = done.reduce((s,r) => s +rowMin(r), 0);
       // Load level
       let load = 'idle', loadCls = 'ar-load-idle';
       if (active.length >= 5) { load = 'overloaded'; loadCls = 'ar-load-over'; }
@@ -3507,7 +3539,7 @@
 
     const doneBody = recentlyDone.length ? recentlyDone.map(r => {
       const e = editors.find(x => x.name === r.editor) || { color:'#6f7c88', name:r.editor };
-      return compactRow(e, '✓ ' + escapeHtml(truncate(projName(r), 26)), `${r.points!=null?Number(r.points):pointsFromRevenue(r.revenue)} pts`, 'var(--green)');
+      return compactRow(e, '✓ ' + escapeHtml(truncate(projName(r), 26)), `${rowMin(r)} min`, 'var(--green)');
     }).join('') : `<div class="ar-empty">Nothing finished yet.</div>`;
 
     const freeingBody = freeing.length ? freeing.map(e => {
@@ -3741,10 +3773,10 @@
     // Compute teammate totals
     const mateData = teammates.map(name => {
       const myRows = periodRowsAll.filter(r => r.editor === name);
-      const done = myRows.filter(r => r.status === 'Done');
-      const pipe = myRows.filter(r => r.status !== 'Done');
-      const donePts = done.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
-      const pipePts = pipe.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
+      const done = myRows.filter(isDelivered);
+      const pipe = myRows.filter(r => !isDelivered(r));
+      const donePts = done.reduce((s,r) => s +rowMin(r), 0);
+      const pipePts = pipe.reduce((s,r) => s +rowMin(r), 0);
       return { name, rows: myRows, done, pipe, donePts, pipePts };
     });
     const teamPipePts = mateData.reduce((s,m) => s + m.pipePts, 0);
@@ -3756,7 +3788,7 @@
       let done = 0, pipe = 0;
       (team.members || []).forEach(name => {
         periodRowsAll.filter(r => r.editor === name).forEach(r => {
-          const pts = r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue);
+          const pts =rowMin(r);
           if (r.status === 'Done') done += pts; else pipe += pts;
         });
       });
@@ -3893,13 +3925,13 @@
                 if (url) finalLink = ` <a href="${escapeAttr(linkify(url))}" target="_blank" title="Video link" onclick="event.stopPropagation()" style="color:var(--green);text-decoration:none">🎬</a>`;
               }
             }
-            const pts = r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue);
+            const pts =rowMin(r);
             const isDone = r.status === 'Done';
-            const statusBadge = `<span class="status-pill ${statusClass(r.status||'Assigned')}" style="font-size:11px;padding:2px 7px">${r.status||'Assigned'}</span>`;
+            const statusBadge = `<span class="status-pill ${statusClass(r.status||'Assigned')}" style="font-size:11px;padding:2px 7px">${escapeHtml(r.status||'Assigned')}</span>`;
             return `<div class="pulse-project">
               <span class="pulse-project-name">${escapeHtml(truncate(projectName, 50))}${finalLink}</span>
               ${statusBadge}
-              <span class="pulse-project-pts ${isDone?'is-done':''}">${pts} pts</span>
+              <span class="pulse-project-pts ${isDone?'is-done':''}">${pts} min</span>
             </div>`;
           }).join('');
         }
@@ -3909,7 +3941,7 @@
           <div class="pulse-projects">
             <div class="pulse-member-name">${escapeHtml(m.name)}</div>
             <div class="pulse-member-stats">
-              ${m.rows.length} project${m.rows.length===1?'':'s'} · <span class="pts-done">${m.donePts} pts done</span>${pipeStat}
+              ${m.rows.length} project${m.rows.length===1?'':'s'} · <span class="pts-done">${m.donePts} min delivered</span>${pipeStat}
             </div>
             <div style="margin-top:8px">${projHtml}</div>
           </div>
@@ -3949,13 +3981,13 @@
     // Totals row (editor only here, admin uses grouped view)
     const prows = periodRows();
     const doneRows = prows.filter(r => r.status === 'Done');
-    const totalPts = doneRows.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
+    const totalPts = prows.filter(isDelivered).reduce((s,r) => s + rowMin(r), 0);
     const pendingCount = prows.length - doneRows.length;
     if (isEditor() && prows.length > 0) {
       const doneCount = doneRows.length;
       const statusLabel = `${doneCount} done${pendingCount > 0 ? ', ' + pendingCount + ' pending' : ''}`;
       const tc = cols.map(c => {
-        if (c.id === 'points') return `<td><div class="cell total-points">${totalPts} pts</div></td>`;
+        if (c.id === 'points' || c.id === 'minutes') return `<td><div class="cell total-points">${totalPts} min</div></td>`;
         if (c.id === cols[0].id) return `<td><div class="cell" style="color:var(--text-muted);font-size:12px">${statusLabel}</div></td>`;
         return `<td><div class="cell"></div></td>`;
       }).join('');
@@ -3999,7 +4031,7 @@
       const inProgressRows = myRows.filter(r => r.status !== 'Done');
       const totalRev = doneRows.reduce((s,r) => s + (Number(r.revenue)||0), 0);
       const inProgressRev = inProgressRows.reduce((s,r) => s + (Number(r.revenue)||0), 0);
-      const totalPts = doneRows.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
+      const totalPts = myRows.filter(isDelivered).reduce((s,r) => s + rowMin(r), 0);
       const pending = myRows.length - doneRows.length;
       const color = teamColor[name] || 'var(--green)';
       const inProgressLabel = inProgressRev > 0 ? ` <span style="opacity:0.6">(+$${inProgressRev.toLocaleString()} in pipeline)</span>` : '';
@@ -4036,13 +4068,13 @@
       }
       // Shadow footer row: totals + action buttons
       const pipeRevLabel = inProgressRev > 0 ? `<div style="font-size:12px;opacity:0.5;margin-top:2px">+$${inProgressRev.toLocaleString()} pipeline</div>` : '';
-      const inProgressPts = inProgressRows.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
-      const pipePtsLabel = inProgressPts > 0 ? `<div style="font-size:12px;opacity:0.5;margin-top:2px">+${inProgressPts} pipeline</div>` : '';
+      const inProgressPts = myRows.filter(r => !isDelivered(r)).reduce((s,r) => s + rowMin(r), 0);
+      const pipePtsLabel = inProgressPts > 0 ? `<div style="font-size:12px;opacity:0.5;margin-top:2px">+${inProgressPts} min in progress</div>` : '';
       html += `<tr class="shadow-row">
         <td></td>
         ${cols.map(c => {
           if (c.id === 'revenue') return `<td><div style="font-size:13px;font-weight:700;color:var(--green)">$${totalRev.toLocaleString()}</div>${pipeRevLabel}</td>`;
-          if (c.id === 'points') return `<td><div style="font-size:13px;font-weight:700;color:var(--text)">${totalPts}</div>${pipePtsLabel}</td>`;
+          if (c.id === 'points' || c.id === 'minutes') return `<td><div style="font-size:13px;font-weight:700;color:var(--text)">${totalPts} min</div>${pipePtsLabel}</td>`;
           return '<td></td>';
         }).join('')}
         <td style="text-align:right">
@@ -4063,8 +4095,8 @@
     const inProgress = allFiltered.filter(r => r.status !== 'Done');
     const grandRev = allDone.reduce((s,r) => s + (Number(r.revenue)||0), 0);
     const grandRevInProgress = inProgress.reduce((s,r) => s + (Number(r.revenue)||0), 0);
-    const grandPts = allDone.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
-    const grandPtsInProgress = inProgress.reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
+    const grandPts = allFiltered.filter(isDelivered).reduce((s,r) => s + rowMin(r), 0);
+    const grandPtsInProgress = allFiltered.filter(r => !isDelivered(r)).reduce((s,r) => s + rowMin(r), 0);
     const grandPending = allFiltered.length - allDone.length;
     html += `<div style="margin-top:8px;padding:18px 22px;background:rgba(255,255,255,0.9);border:1px solid var(--border);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">
       <div style="font-size:13px;color:var(--text-muted);font-weight:600;letter-spacing: 0">PERIOD TOTALS${grandPending?` · ${grandPending} in pipeline`:''}</div>
@@ -4075,9 +4107,9 @@
           ${grandRevInProgress > 0 ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">+ $${grandRevInProgress.toLocaleString()} in pipeline</div>` : ''}
         </div>
         <div>
-          <div style="font-size:12.5px;color:var(--text-muted);letter-spacing: 0">POINTS</div>
+          <div style="font-size:12.5px;color:var(--text-muted);letter-spacing: 0">MINUTES</div>
           <div style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--font-display);line-height:1.2">${grandPts}</div>
-          ${grandPtsInProgress > 0 ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">+ ${grandPtsInProgress} in pipeline</div>` : ''}
+          ${grandPtsInProgress > 0 ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">+ ${grandPtsInProgress} min in progress</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -4192,6 +4224,15 @@
       const inner = val ? `<span class="editor-pill"><span class="editor-avatar">${escapeHtml((val[0]||'?').toUpperCase())}</span>${escapeHtml(val)}</span>` : `<span class="cell-empty">Assign editor</span>`;
       const click = editable ? `onclick="openEditorDropdown(event,'${r.id}')"` : '';
       return `<td><div class="editor-cell" ${click} style="${editable?'':'cursor:default'}">${inner}</div></td>`;
+    }
+    if (c.type === 'minutes') {
+      const mine = isAdmin() || (isEditor() && r.editor === editorName());
+      const locked = !isAdmin() && r.minutesLocked;
+      const canEditMin = mine && !locked && !isClient();
+      const v = rowMin(r);
+      const disp = v ? `<span class="points-val">${v}</span><span class="points-auto">min</span>` : `<span class="cell-empty">${canEditMin ? 'Add min' : '—'}</span>`;
+      const lock = locked ? `<span title="Locked: this video was sent to the client. Ask the admin to change it." style="margin-left:6px;font-size:12px">🔒</span>` : '';
+      return `<td><div class="num-cell" ${canEditMin ? `onclick="editMinutesCell(event,'${r.id}')"` : 'style="cursor:default"'}>${disp}${lock}</div></td>`;
     }
     if (c.type === 'client') {
       if (!isAdmin()) return '<td></td>';
@@ -4603,6 +4644,22 @@
     showToast('Points reset to auto');
   }
 
+  function editMinutesCell(e, rowId) {
+    const r = data.rows.find(x => x.id === rowId); if (!r) return;
+    if (!isAdmin() && !(isEditor() && r.editor === editorName() && !r.minutesLocked)) return;
+    const td = e.currentTarget.parentElement;
+    td.innerHTML = `<input class="cell-input" type="number" min="0" step="0.5" placeholder="minutes" value="${r.minutes != null && r.minutes !== '' ? escapeAttr(String(r.minutes)) : ''}">`;
+    const input = td.querySelector('input'); input.focus(); input.select();
+    let goDown = false;
+    const commit = async () => {
+      const raw = input.value.trim(), n = Number(raw);
+      if (raw !== '' && (!isFinite(n) || n < 0 || n >= 100000)) { showToast('Enter the minutes as a number'); renderActiveCRM(); return; }
+      pushUndo(); r.minutes = raw === '' ? null : Math.round(n * 100) / 100;
+      renderActiveCRM(); await saveData(); if (goDown) focusCellBelow(rowId, 'minutes');
+    };
+    input.addEventListener('blur', commit, { once:true });
+    input.addEventListener('keydown', ev => { if (ev.key==='Enter') { goDown=true; input.blur(); } if (ev.key==='Escape') { input.removeEventListener('blur',commit); renderActiveCRM(); } });
+  }
   function editNumCell(e, rowId, field) {
     if (!isAdmin()) return;
     if (field === 'revenue') { openRevenueEditor(e, rowId); return; }
@@ -4822,7 +4879,11 @@
       data.rows.forEach(r => { if (r.editor === oldName) r.editor = newName; });
       // Rename account too
       const acct = (data.editorAccounts || []).find(a => a.name === oldName);
-      if (acct) acct.name = newName;
+      if (acct) {
+        const { error: rnErr } = await db.rpc('crm_rename_login', { p_role: 'editor', p_old: oldName, p_new: newName });
+        if (rnErr) { showToast('Could not rename: ' + rnErr.message); return; }
+        acct.name = newName;
+      }
       renderAll(); await saveData(); showToast(`Renamed to ${newName}`);
     });
   }
@@ -5129,9 +5190,9 @@
     const editorPoints = {}, teamPoints = {};
     periodTeams.forEach(t => teamPoints[t.id] = 0);
     periodEditors.forEach(e => editorPoints[e] = 0);
-    data.rows.filter(r => (r.period || currentPeriodKey()) === pk && r.status === 'Done').forEach(r => {
+    data.rows.filter(r => (r.period || currentPeriodKey()) === pk && isDelivered(r)).forEach(r => {
       if (!r.editor) return;
-      const pts = (r.points!=null) ? Number(r.points) : pointsFromRevenue(r.revenue);
+      const pts = rowMin(r);
       if (editorPoints[r.editor]==null) editorPoints[r.editor] = 0;
       editorPoints[r.editor] += pts;
       const t = editorTeamFor(r.editor, pk); if (t) teamPoints[t.id] = (teamPoints[t.id]||0) + pts;
@@ -5191,7 +5252,7 @@
         <div class="ranking-name-wrap">
           <div class="ranking-name">${escapeHtml(t.leader)} <span style="color:${tc.main};font-weight:600;font-size:12.5px">· ${escapeHtml(t.name)}</span></div>
         </div>
-        <div class="ranking-points" style="${isWinner&&stage===3?'color:#c9971c;font-size:22px':''}">${t.points}</div>
+        <div class="ranking-points" style="${isWinner&&stage===3?'color:#c9971c;font-size:22px':''}">${Math.round(t.points*10)/10}<span class="ranking-unit"> min</span></div>
       </div>`;
     }).join('');
     html += '</div></div>';
@@ -5210,7 +5271,7 @@
           <div class="ranking-name-wrap">
             <div class="ranking-name">${escapeHtml(e.name)}${e.leader?'<span style="color:'+color.main+';font-size:12px;margin-left:6px">★</span>':''}${tag}</div>
           </div>
-          <div class="ranking-points" style="color:${color.main}">${e.points}</div>
+          <div class="ranking-points" style="color:${color.main}">${Math.round(e.points*10)/10}<span class="ranking-unit"> min</span></div>
         </div>`;
       }).join('');
       return s;
@@ -5247,6 +5308,7 @@
   ];
 
   function renderClientsCRM() {
+    CR.names = [];
     const container = document.getElementById('clientsContent');
     if (!container) return;
     if (!isAdmin()) return;
@@ -5283,6 +5345,7 @@
             <div>
               <div style="font-size:16px;font-weight:700;color:var(--text);font-family:var(--font-display);letter-spacing:-0.01em">${escapeHtml(client.name)}</div>
               <div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">${clientRows.length} project${clientRows.length===1?'':'s'} · ${done} done · $${totalRev.toLocaleString()} revenue${inProgressLabel}</div>
+              ${crControlHtml(client.name)}
             </div>
           </div>
           <button class="btn-tb" onclick="addClientRow('${escapeAttr(client.name)}')" style="font-size:12px;padding:7px 14px">＋ Add Project</button>
@@ -5360,7 +5423,7 @@
   }
   function periodPoints(pk) {
     return data.rows.filter(r => (r.period || currentPeriodKey()) === pk && isDone(r))
-      .reduce((s,r) => s + (r.points!=null ? Number(r.points) : pointsFromRevenue(r.revenue)), 0);
+      .reduce((s,r) => s +rowMin(r), 0);
   }
 
   function monthRate(pk) {
@@ -7137,12 +7200,12 @@
     L.push('');
     L.push('VIDEOS / CRM');
     L.push(hr);
-    L.push('Total videos: ' + prows.length + '   Done: ' + prows.filter(r=>r.status==='Done').length + '   Total points: ' + periodPoints(pk));
+    L.push('Total videos: ' + prows.length + '   Done: ' + prows.filter(r=>r.status==='Done').length + '   Total minutes: ' + periodPoints(pk));
     L.push('');
     if (prows.length) {
-      L.push(pad('Raw File', 24) + pad('Editor', 14) + pad('Revenue', 12) + pad('Points', 8) + 'Status');
+      L.push(pad('Raw File', 24) + pad('Editor', 14) + pad('Revenue', 12) + pad('Minutes', 8) + 'Status');
       prows.forEach(r => {
-        const pts = r.points!=null ? r.points : pointsFromRevenue(r.revenue);
+        const pts =rowMin(r);
         L.push(pad(r.rawFile||'-', 24) + pad(r.editor||'-', 14) + pad(money(r.revenue), 12) + pad(pts, 8) + (r.status||'-'));
       });
       L.push('');
@@ -7159,12 +7222,12 @@
     }
     // Points earned per editor
     const ptsByEditor = {};
-    prows.forEach(r => { if (r.editor) { const p = r.points!=null?Number(r.points):pointsFromRevenue(r.revenue); ptsByEditor[r.editor] = (ptsByEditor[r.editor]||0) + p; } });
+    prows.forEach(r => { if (r.editor) { const p =rowMin(r); ptsByEditor[r.editor] = (ptsByEditor[r.editor]||0) + p; } });
     const ptsList = Object.entries(ptsByEditor).sort((a,b)=>b[1]-a[1]);
     if (ptsList.length) {
-      L.push('POINTS BY EDITOR');
+      L.push('MINUTES BY EDITOR');
       L.push(hr);
-      ptsList.forEach(([n,p],i) => L.push((i+1) + '. ' + pad(n, 20) + p + ' pts'));
+      ptsList.forEach(([n,p],i) => L.push((i+1) + '. ' + pad(n, 20) + p + ' min'));
       L.push('');
     }
     // Notes
@@ -7705,6 +7768,14 @@
     if (!(await loadData())) return false;
     populateLoginDropdown();
     if (isAdmin()) {
+      await crLoad();
+      // Boards saved before minutes existed: swap the Points column for Minutes
+      if (data.columns && data.columns.length && !data.columns.some(c => c.id === 'minutes')) {
+        const mcol = { id:'minutes', label:'Minutes', type:'minutes', adminOnly:false, locked:true, editorEditable:true };
+        const pi = data.columns.findIndex(c => c.id === 'points');
+        if (pi >= 0) data.columns.splice(pi, 1, mcol); else data.columns.splice(Math.min(3, data.columns.length), 0, mcol);
+        await saveData();
+      }
       // Add the admin-only Client column to boards saved before it existed
       if (data.columns && data.columns.length && !data.columns.some(c => c.id === 'client')) {
         const at = data.columns.findIndex(c => c.id === 'editor');
@@ -7763,6 +7834,36 @@
     if (error) showToast('Could not save your details: ' + error.message);
   }
 
+  // ===================== CLIENT RATES (admin only) =====================
+  const CR = { map: {}, names: [] };
+  async function crLoad() {
+    if (!isAdmin()) return;
+    const { data: d, error } = await db.from('client_rates').select('*');
+    if (error) { showError('Could not load client rates: ' + error.message); return; }
+    CR.map = {}; (d || []).forEach(x => CR.map[String(x.client).toLowerCase()] = x);
+  }
+  function crGet(name) { return CR.map[String(name || '').toLowerCase()]; }
+  function crControlHtml(name) {
+    if (!isAdmin()) return '';
+    const i = CR.names.push(name) - 1, r = crGet(name) || {};
+    const mode = r.mode || 'minute';
+    return `<div class="cr-ctl" title="Only you can see this">
+      <span>🔒 Charges</span>
+      <select id="crMode_${i}" onchange="crSave(${i})"><option value="minute" ${mode==='minute'?'selected':''}>per minute</option><option value="flat" ${mode==='flat'?'selected':''}>flat per video</option></select>
+      <span>$</span><input id="crRate_${i}" type="number" min="0" step="any" placeholder="rate" value="${r.rate != null ? escapeAttr(String(r.rate)) : ''}" onchange="crSave(${i})">
+      <span class="wl-muted">${mode==='minute' ? '/ min' : '/ video'}</span></div>`;
+  }
+  async function crSave(i) {
+    const name = CR.names[i]; if (!name) return;
+    const mode = document.getElementById('crMode_' + i).value, raw = document.getElementById('crRate_' + i).value.trim();
+    if (raw !== '' && !(Number(raw) >= 0)) { showToast('Enter the rate as a number'); return; }
+    const { data: n, error } = await db.rpc('crm_set_client_rate', { p_client: name, p_mode: mode, p_rate: raw === '' ? null : Number(raw) });
+    if (error) { showToast('Could not save: ' + error.message); return; }
+    await crLoad();
+    showToast(raw === '' ? `Rate removed for ${name}` : `${name}: $${Number(raw)} ${mode === 'minute' ? 'per minute' : 'per video'}${n ? ` · ${n} unpaid project${n === 1 ? '' : 's'} updated` : ''}`);
+    if (currentPage === 'clients') renderClientsCRM();
+  }
+
   async function renderInvoices() {
     if (!isAdmin()) return;
     if (INV.mounted) return;            // don't wipe the form while someone is typing
@@ -7770,13 +7871,27 @@
     const el = document.getElementById('invoicesContent');
     el.innerHTML = '<div class="inv-empty">Loading invoices…</div>';
     if (!INV.loaded && !(await invLoad())) { INV.mounted = false; return; }
+    await Promise.all([invLoadBilling(), crLoad()]);
     INV.cur ? invRenderEditor() : invRenderList();
   }
 
   // ---------- Client payments: Done projects are unpaid until marked paid ----------
   const invUsd = n => '$' + (Math.round(invNum(n) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const invIsPaid = id => !!(INV.billing[id] && INV.billing[id].paid);
-  function invDoneProjects() { return (data.rows || []).filter(r => r.status === 'Done'); }
+  function invIsBillable(r) { const b = INV.billing[r.id]; return !!((b && b.billable_at) || r.status === 'Done' || r.status === 'Client Review'); }
+  function invDoneProjects() { return (data.rows || []).filter(invIsBillable); }
+  function invLinkedElsewhere(r, invoiceId) { const b = INV.billing[r.id]; return !!(b && b.invoice_id && b.invoice_id !== invoiceId && INV.list.some(x => x.id === b.invoice_id)); }
+  async function invLoadBilling() {
+    const { data: b, error } = await db.from('project_billing').select('*');
+    if (!error) { INV.billing = {}; (b || []).forEach(x => INV.billing[x.project_id] = x); }
+  }
+  function invLinesFor(rows) {
+    return rows.map(r => {
+      const cr = crGet(r.client), min = rowMin(r);
+      if (r.revenueSource === 'auto' && cr && cr.mode === 'minute') return { desc: `${r.rawFile || 'Video edit'} (${min} min)`, qty: min, rate: cr.rate, projectId: r.id };
+      return { desc: r.rawFile || 'Video edit', qty: 1, rate: r.revenue || '', projectId: r.id };
+    });
+  }
   function invPaymentGroups() {
     const by = {};
     invDoneProjects().forEach(r => { const k = (r.client || '').trim() || '—'; (by[k] = by[k] || []).push(r); });
@@ -7796,7 +7911,7 @@
       const open = INV.openClient === g.name;
       return `<div class="pay-client ${open ? 'open' : ''}">
         <div class="pay-row" onclick="invToggleClient(${gi})">
-          <div class="pay-name">${g.name === '—' ? '<span class="wl-muted">No client set</span>' : ie(g.name)}<span class="wl-muted"> · ${g.items.length} done project${g.items.length === 1 ? '' : 's'}</span></div>
+          <div class="pay-name">${g.name === '—' ? '<span class="wl-muted">No client set</span>' : ie(g.name)}<span class="wl-muted"> · ${g.items.length} delivered video${g.items.length === 1 ? '' : 's'}</span></div>
           <div class="pay-amt"><span>Unpaid</span><b style="color:${g.unpaid ? 'var(--red)' : 'var(--text-muted)'}">${ie(invUsd(g.unpaid))}</b></div>
           <div class="pay-amt"><span>Paid</span><b style="color:var(--ok)">${ie(invUsd(g.paid))}</b></div>
           <div class="pay-chev">${open ? '▴' : '▾'}</div>
@@ -7806,19 +7921,48 @@
           <div class="table-scroll"><table class="wl-table"><thead><tr><th>Month</th><th>Project</th><th>Editor</th><th class="num">Amount</th><th>Payment</th><th></th></tr></thead><tbody>
           ${g.items.map(r => { const b = INV.billing[r.id], paid = invIsPaid(r.id); return `<tr>
             <td>${ie(periodKeyToLabel(r.period || cur).replace(/ \d{4}$/, ''))}</td><td>${ie(r.rawFile || 'Untitled project')}</td><td>${ie(r.editor || '—')}</td>
-            <td class="num"><b>${invNum(r.revenue) ? ie(invUsd(r.revenue)) : '<span class="wl-muted" title="Set the revenue on the Editors board">no amount</span>'}</b></td>
+            <td class="num"><b>${invNum(r.revenue) ? ie(invUsd(r.revenue)) : '<span class="wl-muted" title="Set this client\'s rate on the Clients page, or the minutes on the Editors board">no amount</span>'}</b>${r.revenueSource === 'auto' ? `<div class="wl-muted" style="font-size:11.5px">${crGet(r.client) && crGet(r.client).mode === 'minute' ? ie(rowMin(r) + ' min × $' + crGet(r.client).rate) : 'flat rate'}</div>` : ''}</td>
             <td>${paid ? `<span class="status-pill status-done">Paid${b.paid_at ? ' ' + ie(invDate(String(b.paid_at).slice(0, 10))) : ''}</span>` : '<span class="status-pill status-revision">Unpaid</span>'}</td>
             <td class="num"><button class="btn ${paid ? 'btn-ghost' : 'btn-secondary'} btn-sm" onclick="invSetPaid('${ie(r.id)}', ${!paid})">${paid ? 'Undo' : '✓ Paid'}</button></td></tr>`; }).join('')}
           </tbody></table></div></div>` : ''}
       </div>`; }).join('');
     return `<div class="inv-card-title" style="font-size:18px;margin-bottom:10px">Client payments</div>
       <div class="inv-stats" style="margin-bottom:12px">
-        <div class="inv-stat"><span>Unpaid · ${openCount} done project${openCount === 1 ? '' : 's'}</span><b style="color:var(--red)">${ie(invUsd(unpaid))}</b></div>
+        <div class="inv-stat"><span>Unpaid · ${openCount} video${openCount === 1 ? '' : 's'}</span><b style="color:var(--red)">${ie(invUsd(unpaid))}</b></div>
         <div class="inv-stat"><span>Paid this month</span><b style="color:var(--ok)">${ie(invUsd(paidMonth))}</b></div>
         <div class="inv-stat"><span>Paid · all time</span><b>${ie(invUsd(paidAll))}</b></div>
       </div>
-      <div class="wl-help">When a project is marked <b>Done</b> on the Editors board, its revenue shows here as <b>unpaid</b>. When the client pays, click <b>✓ Paid</b>, or mark the invoice that includes it as paid. Amounts are in US dollars.</div>
-      <div class="pay-list">${rowsHtml || '<div class="wl-none">No finished projects yet.</div>'}</div>`;
+      <div class="wl-help">When a video is sent to the client (status <b>Client Review</b> or <b>Done</b>), its amount is added here as <b>unpaid</b> automatically, using the client's rate from the <b>Clients</b> page (per minute × minutes, or a flat price). When the client pays, click <b>✓ Paid</b>, or mark the invoice that includes it as paid. Amounts are in US dollars.</div>
+      <div class="pay-list">${rowsHtml || '<div class="wl-none">No videos have been sent to clients yet.</div>'}</div>`;
+  }
+  function invAutoHtml() {
+    const owing = invPaymentGroups().filter(g => g.name !== '—' && g.items.some(r => !invIsPaid(r.id) && !invLinkedElsewhere(r)));
+    INV.autoNames = owing.map(g => g.name);
+    return `<div class="inv-card inv-auto" style="margin-top:16px">
+      <div class="inv-card-title">⚡ Create an invoice from recent work</div>
+      <div class="inv-auto-row">
+        <label class="inv-field"><span>Client</span><select id="invAutoClient">${owing.length ? owing.map((g, i) => `<option value="${i}">${ie(g.name)} · ${ie(invUsd(g.unpaid))} unpaid</option>`).join('') : '<option value="">No unpaid work</option>'}</select></label>
+        <label class="inv-field"><span>Work from</span><select id="invAutoDays"><option value="7">The last 7 days</option><option value="14">The last 14 days</option><option value="30" selected>The last month (30 days)</option><option value="0">All unpaid work</option></select></label>
+        <button class="btn btn-primary" onclick="invAuto()" ${owing.length ? '' : 'disabled'}>Create invoice</button>
+      </div>
+      <div class="wl-muted" style="font-size:13px">Adds every unpaid video sent to that client in the period, priced from their rate. You can check it before saving or sending.</div>
+    </div>`;
+  }
+  function invAuto() {
+    const idx = document.getElementById('invAutoClient').value, days = Number(document.getElementById('invAutoDays').value);
+    const name = (INV.autoNames || [])[Number(idx)]; if (idx === '' || !name) { showToast('Pick a client'); return; }
+    const since = days ? Date.now() - days * 86400000 : 0;
+    const rows = invDoneProjects().filter(r => (r.client || '').toLowerCase() === name.toLowerCase() && !invIsPaid(r.id) && !invLinkedElsewhere(r))
+      .filter(r => { if (!since) return true; const b = INV.billing[r.id]; const t = b && b.billable_at ? Date.parse(b.billable_at) : NaN; return isNaN(t) ? true : t >= since; });
+    if (!rows.length) { showToast(`No unpaid work for ${name} in that period`); return; }
+    invNew();
+    const v = INV.cur.v, saved = (INV.profile.clients || {})[name] || {};
+    v.billTo = { name, email: saved.email || '', address: saved.address || '' };
+    v.currency = 'USD';
+    v.items = invLinesFor(rows);
+    if (days) v.notes = (v.notes ? v.notes + '\n' : '') + `Work delivered ${invDate(new Date(since).toISOString().slice(0,10))} – ${invDate(new Date().toISOString().slice(0,10))}.`;
+    invRenderEditor();
+    showToast(`${rows.length} video${rows.length === 1 ? '' : 's'} added for ${name}. Check, then Save or Email.`);
   }
   function invToggleClient(gi) { const g = invPaymentGroups()[gi]; INV.openClient = (g && INV.openClient !== g.name) ? g.name : null; invRenderList(); }
   async function invSetPaidMany(ids, paid, invoiceId) {
@@ -7844,7 +7988,7 @@
     const el = document.getElementById('invoicesContent');
     const rows = INV.list;
     const cur = INV.profile.currency || 'USD';
-    let html = invPaymentsHtml() + `<div class="inv-toolbar" style="margin-top:26px">
+    let html = invPaymentsHtml() + invAutoHtml() + `<div class="inv-toolbar" style="margin-top:26px">
         <div class="inv-card-title" style="margin:0;font-size:18px">Invoices</div>
         <button class="btn btn-primary" onclick="invNew()">＋ New invoice</button>
       </div>`;
@@ -8010,10 +8154,10 @@
     if (!name) { showToast('Type the client name first'); return; }
     const pk = activePeriodKey();
     const already = new Set(v.items.map(i => i.projectId).filter(Boolean));
-    const rows = (data.rows||[]).filter(r => (r.client||'').toLowerCase() === name.toLowerCase() && r.status === 'Done' && !invIsPaid(r.id) && !already.has(r.id));
+    const rows = invDoneProjects().filter(r => (r.client||'').toLowerCase() === name.toLowerCase() && !invIsPaid(r.id) && !already.has(r.id) && !invLinkedElsewhere(r, INV.cur.id));
     if (!rows.length) { showToast(`No unpaid finished projects for ${name}`); return; }
     v.items = v.items.filter(it => (it.desc||'').trim() || invNum(it.rate));
-    rows.forEach(r => v.items.push({ desc: r.rawFile || 'Video edit', qty: 1, rate: r.revenue || '', projectId: r.id }));
+    invLinesFor(rows).forEach(it => v.items.push(it));
     document.getElementById('invItems').innerHTML = invItemsHtml(); invUpdatePreview();
     showToast(`Added ${rows.length} unpaid finished project${rows.length===1?'':'s'}. Check the prices.`);
   }
@@ -8070,6 +8214,11 @@
     const i = INV.list.findIndex(x => x.id === row.id);
     if (i >= 0) INV.list[i] = Object.assign(INV.list[i], row); else INV.list.unshift(Object.assign({ created_at: new Date().toISOString() }, row));
     const firstSave = !c.id; c.id = row.id;
+    const linkIds = (v.items || []).map(i => i.projectId).filter(Boolean);
+    if (linkIds.length) {
+      const { error: le } = await db.from('project_billing').upsert(linkIds.map(id => ({ project_id: id, invoice_id: row.id })), { onConflict: 'project_id' });
+      if (!le) linkIds.forEach(id => { INV.billing[id] = Object.assign({ project_id: id }, INV.billing[id] || {}, { invoice_id: row.id }); });
+    }
     // remember your details and this client's email for next time
     const p = INV.profile; p.business = JSON.parse(JSON.stringify(v.from)); p.payment = v.payment; p.notes = v.notes; p.currency = v.currency; p.taxPct = invNum(v.taxPct);
     if (row.client) { p.clients = p.clients || {}; p.clients[row.client] = { email: row.client_email, address: v.billTo.address || '' }; }
@@ -8092,6 +8241,8 @@
     showConfirm('Delete invoice?', `${INV.cur.v.number} will be deleted for good.`, 'Delete', async () => {
       const { error } = await db.from('invoices').delete().eq('id', INV.cur.id);
       if (error) { showToast('Could not delete: ' + error.message); return; }
+      await db.from('project_billing').update({ invoice_id: null }).eq('invoice_id', INV.cur.id);
+      Object.values(INV.billing).forEach(b => { if (b.invoice_id === INV.cur.id) b.invoice_id = null; });
       INV.list = INV.list.filter(x => x.id !== INV.cur.id); invBack(); showToast('Invoice deleted');
     }, true);
   }
@@ -8260,7 +8411,7 @@
     const pay = WL.pay[r.id] || {};
     const base = wlEditorRate(r.editor, r.client);
     const rate = wlSet(pay.rate) ? wlNum(pay.rate) : base.rate;
-    const minutes = wlNum(pay.minutes), extra = wlNum(pay.extra);
+    const minutes = rowMin(r), extra = wlNum(pay.extra);
     return { pay, base, rate, minutes, extra, total: minutes * rate + extra, special: wlSet(pay.rate) };
   }
   function wlEditorGroups(pk) {
@@ -8283,7 +8434,7 @@
           <td>${ie(r.rawFile || 'Untitled project')}</td>
           <td>${r.client ? `<span class="client-pill">${ie(r.client)}</span>` : '<span class="wl-muted">No client</span>'}</td>
           <td><span class="status-pill ${statusClass(r.status || 'Assigned')}">${ie(r.status || 'Assigned')}</span></td>
-          <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(wlSet(c.pay.minutes) ? c.pay.minutes : '')}" placeholder="0" data-pid="${ie(r.id)}" data-f="minutes" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Minutes"></td>
+          <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(wlSet(r.minutes) ? r.minutes : '')}" placeholder="0" data-pid="${ie(r.id)}" data-f="minutes" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Minutes"></td>
           <td class="num"><input class="wl-rate ${c.special ? 'wl-special' : ''}" type="number" min="0" step="any" value="${ie(c.special ? c.pay.rate : '')}" placeholder="${ie(wlFmt(c.base.rate))}" title="Empty = ${ie(c.base.src)} (${ie(wlFmt(c.base.rate))}). Type a number to use a different rate for this project only." data-pid="${ie(r.id)}" data-f="rate" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Rate per minute"></td>
           <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(wlSet(c.pay.extra) ? c.pay.extra : '')}" placeholder="0" title="Extra for an advanced project" data-pid="${ie(r.id)}" data-f="extra" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Extra"></td>
           <td class="num"><b id="wlPay_${ie(r.id)}">${ie(wlMoney(c.total))}</b></td>
@@ -8313,7 +8464,7 @@
     return `<div class="inv-card wl-editors">
       <div class="wl-card-head"><div class="inv-card-title" style="margin:0">🎬 Editors · paid per project</div>
         <label class="wl-default">Default rate per minute, all editors ($): <input type="number" min="0" step="any" value="${ie(WL.profile.defaultRate.editor ?? '')}" placeholder="0" onchange="wlSetDefault('editor', this.value)"></label></div>
-      <div class="wl-help">Projects assigned on the <b>Editors</b> board this month show up here automatically. Type the <b>minutes</b>. The rate comes from the editor's usual rate, or their special rate for that client (set under <b>⚙ Rates</b>). To pay one project differently, type a rate in its box. Use <b>Extra</b> for advanced projects.</div>
+      <div class="wl-help">Projects assigned on the <b>Editors</b> board this month show up here automatically, with the <b>minutes</b> the editor entered (you can change them here). The rate comes from the editor's usual rate, or their special rate for that client (set under <b>⚙ Rates</b>). To pay one project differently, type a rate in its box. Use <b>Extra</b> for advanced projects.</div>
       ${blocks || `<div class="wl-none">No projects assigned to editors in this month yet. Assign them on the Editors board and set the client there.</div>`}
     </div>`;
   }
@@ -8341,12 +8492,15 @@
     set('wlTileMin', wlFmt(t.edMin)); set('wlTilePay', wlBdt(t.pay)); set('wlTilePayUsd', wlUsd(t.pay));
   }
   function wlPayInput(el) {
-    const pid = el.dataset.pid; WL.pay[pid] = Object.assign({ project_id: pid }, WL.pay[pid] || {});
+    const pid = el.dataset.pid;
+    if (el.dataset.f === 'minutes') { const r = data.rows.find(x => x.id === pid); if (r) r.minutes = el.value === '' ? null : Math.max(0, wlNum(el.value)); wlRecalcEditors(); return; }
+    WL.pay[pid] = Object.assign({ project_id: pid }, WL.pay[pid] || {});
     WL.pay[pid][el.dataset.f] = el.value === '' ? null : wlNum(el.value);
     if (el.dataset.f === 'rate') el.classList.toggle('wl-special', el.value !== '');
     wlRecalcEditors();
   }
   async function wlPaySave(el) {
+    if (el.dataset.f === 'minutes') { await saveData(); return; }   // minutes live on the project (also shown on the board)
     const rec = WL.pay[el.dataset.pid]; if (!rec) return;
     const { error } = await db.from('project_pay').upsert({ project_id: rec.project_id, minutes: rec.minutes ?? null, rate: rec.rate ?? null, extra: rec.extra ?? null, updated_at: new Date().toISOString() }, { onConflict: 'project_id' });
     if (error) showToast('Could not save: ' + error.message);
