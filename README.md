@@ -25,6 +25,13 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 - **✉ Email to client** sends the PDF straight to the client's inbox once email sending is set up (see Technical notes). Until then, it downloads the PDF and opens your own email app with the message written for you; just attach the PDF and press Send.
 - Your business details, payment info and each client's email are remembered for next time. Mark invoices as **paid** to keep the totals at the top correct.
 
+## Work Log (admin only)
+
+- Open the **Work Log** tab. Pick **Editor**, **Designer** or **Scriptwriter**, choose the person, then enter the minutes edited, thumbnails made or scripts written. Client and note are optional. Click **＋ Add**.
+- Editors come from your teams automatically. Add designers and scriptwriters with **＋ Add a new…** in the person list.
+- Set a **default pay** per minute, thumbnail or script for each role, or a different rate for one person. The page then works out what each person is owed for the month.
+- Use **‹ ›** to switch months, and **⬇ Download month (Excel)** to get the totals and every entry as a spreadsheet.
+
 ## Who sees what
 
 | | Admin | Editor | Client |
@@ -32,6 +39,7 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 | Project board | ✅ all | ✅ all (edits their own) | only their own projects |
 | Revenue, points, who's assigned | ✅ edit | view only | – |
 | Finance, salaries, expenses, leads | ✅ | – | – |
+| Invoices, Work Log (minutes, thumbnails, scripts, pay) | ✅ | – | – |
 | Logins | ✅ | their own | their own |
 
 These rules are enforced by the database, not just hidden on screen.

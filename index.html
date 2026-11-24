@@ -1164,6 +1164,33 @@
     .inv-item { grid-template-columns: 1fr 1fr 30px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); }
     .inv-item input:first-child { grid-column: 1 / -1; } .inv-item-amt { grid-column: 1 / 3; text-align:left; }
   }
+  /* ===== Work log ===== */
+  .wl-lock { background: var(--accent-soft); color: var(--text-dim); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; }
+  .wl-period { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .wl-period-label { font-weight:700; font-size:17px; color:var(--text); } .wl-period-label span { font-weight:500; color:var(--text-muted); font-size:14px; }
+  .wl-stats { margin-bottom:16px; }
+  .wl-role-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .wl-role { border:1px solid var(--border-bright); background:var(--surface); color:var(--text-dim); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .wl-role.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .wl-form { display:grid; grid-template-columns: 150px 1.2fr 130px 1.2fr 1.4fr auto; gap:0 12px; align-items:end; }
+  .wl-form .inv-field { margin-bottom:0; }
+  .wl-add-btn { height:42px; }
+  .wl-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap:14px; margin-top:14px; }
+  .wl-card { margin-bottom:0; }
+  .wl-card-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .wl-default { font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px; }
+  .wl-default input, .wl-rate { width:84px; padding:6px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; font-size:13.5px; text-align:right; background:#fff; color:var(--text); }
+  .table-scroll { overflow-x:auto; }
+  .wl-table { width:100%; border-collapse:collapse; font-size:14px; }
+  .wl-table th { text-align:left; font-size:12.5px; color:var(--text-muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .wl-table td { padding:8px; border-bottom:1px solid var(--border); color:var(--text); }
+  .wl-table .num { text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
+  .wl-table tfoot td { font-weight:700; border-bottom:0; border-top:2px solid var(--border-bright); }
+  .wl-none { color:var(--text-muted); font-size:14px; text-align:center; padding:16px; }
+  .wl-hint { font-size:13px; color:var(--text-muted); margin:10px 2px 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .wl-hint select { padding:4px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; background:#fff; color:var(--text); }
+  @media (max-width: 1100px) { .wl-form { grid-template-columns: 1fr 1fr 1fr; } .wl-note { grid-column: span 2; } .wl-form .inv-field { margin-bottom:12px; } .wl-add-btn { margin-bottom:12px; } }
+  @media (max-width: 560px) { .wl-form { grid-template-columns: 1fr 1fr; } .wl-note { grid-column: 1 / -1; } .wl-add-btn { grid-column: 1 / -1; } .wl-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1214,6 +1241,7 @@
     <div class="nav-tab" data-page="finance" onclick="switchPage('finance')" id="financeTab">Finance</div>
     <div class="nav-tab" data-page="leads" onclick="switchPage('leads')" id="leadsTab" style="display:none">Leads</div>
     <div class="nav-tab" data-page="invoices" onclick="switchPage('invoices')" id="invoicesTab" style="display:none">Invoices</div>
+    <div class="nav-tab" data-page="worklog" onclick="switchPage('worklog')" id="worklogTab" style="display:none">Work Log</div>
   </div>
 
   <div class="page active" id="page-crm">
@@ -1291,6 +1319,12 @@
     <div id="financeContent"></div>
   </div>
 
+  <div class="page" id="page-worklog">
+    <div class="section-header">
+      <div><div class="section-title">Work Log</div><div class="section-sub">Minutes edited, thumbnails designed and scripts written by each person this month</div></div>
+    </div>
+    <div id="worklogContent"></div>
+  </div>
   <div class="page" id="page-invoices">
     <div class="section-header">
       <div><div class="section-title">Invoices</div><div class="section-sub">Create an invoice, download it as a PDF, or email it to your client</div></div>
@@ -2604,6 +2638,7 @@
       document.getElementById('clientsTab').style.display = showFull ? 'flex' : 'none';
       if (leadsTab) leadsTab.style.display = (showFull) ? 'flex' : (leadsOnlyMode() ? 'flex' : 'none');
       const invTab = document.getElementById('invoicesTab'); if (invTab) invTab.style.display = showFull ? 'flex' : 'none';
+      const wlTab = document.getElementById('worklogTab'); if (wlTab) wlTab.style.display = showFull ? 'flex' : 'none';
 
       document.getElementById('addColBtn').style.display = showFull ? 'inline-block' : 'none';
       if (arb) arb.style.display = 'none';
@@ -2647,7 +2682,7 @@
     let startPage = 'crm';
     try { startPage = localStorage.getItem('agency_os_page') || 'crm'; } catch(e) {}
     const allowed = {
-      admin: ['crm','clients','leaderboard','finance','leads','invoices'],
+      admin: ['crm','clients','leaderboard','finance','leads','invoices','worklog'],
       editor: ['crm','leaderboard'],
       client: ['crm']
     };
@@ -2667,6 +2702,7 @@
     if (page === 'clients' && !isAdmin()) return;
     if (page === 'leads' && !isAdmin()) return;
     if (page === 'invoices' && (!isAdmin() || foodOnlyMode() || leadsOnlyMode())) return;
+    if (page === 'worklog' && (!isAdmin() || foodOnlyMode() || leadsOnlyMode())) return;
     if (page === 'leaderboard' && isClient()) return;
     currentPage = page;
     try { localStorage.setItem('agency_os_page', page); } catch(e) {}
@@ -2787,6 +2823,7 @@
     if (currentPage === 'clients') renderClientsCRM();
     if (currentPage === 'leads') { renderPriorityClients(); renderLeads(); }
     if (currentPage === 'invoices') renderInvoices();
+    if (currentPage === 'worklog') renderWorkLog();
     populateEditorFilter();
   }
 
@@ -8007,6 +8044,202 @@
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
     INV.cur.status = INV.cur.status === 'paid' ? 'paid' : 'sent'; await invSave(true); invRenderEditor();
     showConfirm('Almost done ✉', `Your email app is opening with the message ready for ${to}. The invoice PDF was just downloaded — attach it (it's in your Downloads folder) and press Send.`, 'Got it', () => {}, false);
+  }
+
+  // ===================== WORK LOG (admin only) =====================
+  const WL = { loaded: false, rows: [], profile: null, period: null, mounted: false, role: 'editor' };
+  const WL_ROLES = {
+    editor:       { label: 'Editors',        one: 'Editor',       unit: 'min',        units: 'Minutes edited', icon: '🎬', rateLabel: 'Pay per minute' },
+    designer:     { label: 'Designers',      one: 'Designer',     unit: 'thumbnail',  units: 'Thumbnails',     icon: '🖼️', rateLabel: 'Pay per thumbnail' },
+    scriptwriter: { label: 'Scriptwriters',  one: 'Scriptwriter', unit: 'script',     units: 'Scripts',        icon: '✍️', rateLabel: 'Pay per script' }
+  };
+  const wlNum = v => { const n = parseFloat(String(v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
+  const wlFmt = n => (Math.round(wlNum(n) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  function wlMoney(n) {
+    const c = (WL.profile && WL.profile.currency) || 'BDT';
+    const s = (Math.round(wlNum(n) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: c === 'BDT' ? 0 : 2, maximumFractionDigits: 2 });
+    return ({ USD: '$', BDT: '৳ ', EUR: '€', GBP: '£' }[c] || c + ' ') + s;
+  }
+  function wlShift(pk, d) { let [y, m] = pk.split('-').map(Number); m += d; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, '0')}`; }
+  function wlPeople(role) {
+    const p = WL.profile.people || {};
+    const set = new Set(p[role] || []);
+    if (role === 'editor') allEditors().forEach(n => set.add(n));
+    WL.rows.filter(r => r.role === role && r.person).forEach(r => set.add(r.person));   // keep people who have history
+    (p.hidden && p.hidden[role] || []).forEach(n => { if (!WL.rows.some(r => r.role === role && r.person === n && r.period === WL.period)) set.delete(n); });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+
+  async function wlLoad() {
+    const [l, p] = await Promise.all([
+      db.from('work_log').select('*').order('work_date', { ascending: false }),
+      db.from('settings').select('work_profile').eq('id', 'main').maybeSingle()
+    ]);
+    if (l.error || p.error) { showError('Could not load the work log: ' + ((l.error || p.error).message)); return false; }
+    WL.rows = l.data || [];
+    WL.profile = Object.assign({ currency: 'BDT', rates: { editor: {}, designer: {}, scriptwriter: {} }, defaultRate: {}, people: { designer: [], scriptwriter: [], editor: [] }, hidden: {} }, (p.data && p.data.work_profile) || {});
+    WL.loaded = true; return true;
+  }
+  async function wlSaveProfile() {
+    const { error } = await db.from('settings').update({ work_profile: WL.profile, updated_at: new Date().toISOString() }).eq('id', 'main');
+    if (error) showToast('Could not save: ' + error.message);
+  }
+  function wlRate(role, person) {
+    const r = (WL.profile.rates[role] || {})[person];
+    return r !== undefined && r !== '' ? wlNum(r) : wlNum(WL.profile.defaultRate[role]);
+  }
+
+  async function renderWorkLog() {
+    if (!isAdmin()) return;
+    if (WL.mounted) return;
+    WL.mounted = true;
+    const el = document.getElementById('worklogContent');
+    el.innerHTML = '<div class="inv-empty">Loading…</div>';
+    if (!WL.loaded && !(await wlLoad())) { WL.mounted = false; return; }
+    if (!WL.period) WL.period = currentPeriodKey();
+    wlRender();
+  }
+
+  function wlRender() {
+    const el = document.getElementById('worklogContent');
+    const pk = WL.period, rows = WL.rows.filter(r => r.period === pk);
+    const totals = {}; let pay = 0;
+    Object.keys(WL_ROLES).forEach(role => {
+      totals[role] = {};
+      rows.filter(r => r.role === role).forEach(r => { totals[role][r.person] = (totals[role][r.person] || 0) + wlNum(r.qty); });
+      Object.entries(totals[role]).forEach(([n, q]) => pay += q * wlRate(role, n));
+    });
+    const sum = role => Object.values(totals[role]).reduce((a, b) => a + b, 0);
+    const today = new Date(); const todayIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const defDate = pk === currentPeriodKey() ? todayIso : '';
+    const R = WL_ROLES[WL.role];
+    const clientNames = [...new Set([...(data.clientAccounts || []).map(c => c.name), ...(data.rows || []).map(r => r.client).filter(Boolean)])].sort();
+
+    let html = `
+      <div class="wl-lock">🔒 Only you (admin) can see this page. Editors, designers, writers and clients can't open it or read this data.</div>
+      <div class="wl-period">
+        <button class="btn btn-secondary btn-sm" onclick="wlGo(-1)" aria-label="Previous month">‹</button>
+        <div class="wl-period-label">${ie(periodKeyToLabel(pk))}${pk === currentPeriodKey() ? ' <span>(this month)</span>' : ''}</div>
+        <button class="btn btn-secondary btn-sm" onclick="wlGo(1)" aria-label="Next month">›</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-secondary btn-sm" onclick="wlCsv()">⬇ Download month (Excel)</button>
+      </div>
+      <div class="inv-stats wl-stats">
+        <div class="inv-stat"><span>🎬 Minutes edited</span><b>${wlFmt(sum('editor'))}</b></div>
+        <div class="inv-stat"><span>🖼️ Thumbnails</span><b>${wlFmt(sum('designer'))}</b></div>
+        <div class="inv-stat"><span>✍️ Scripts</span><b>${wlFmt(sum('scriptwriter'))}</b></div>
+        <div class="inv-stat"><span>💰 Total to pay</span><b style="color:var(--accent)">${ie(wlMoney(pay))}</b></div>
+      </div>
+
+      <div class="inv-card wl-add">
+        <div class="inv-card-title">Add work</div>
+        <div class="wl-role-tabs">${Object.entries(WL_ROLES).map(([k, r]) => `<button class="wl-role ${k === WL.role ? 'active' : ''}" onclick="wlSetRole('${k}')">${r.icon} ${r.one}</button>`).join('')}</div>
+        <div class="wl-form">
+          <label class="inv-field"><span>Date</span><input type="date" id="wlDate" value="${defDate}"></label>
+          <label class="inv-field"><span>${R.one}</span><select id="wlPerson">${wlPeople(WL.role).map(n => `<option>${ie(n)}</option>`).join('')}<option value="__new">＋ Add a new ${R.one.toLowerCase()}…</option></select></label>
+          <label class="inv-field"><span>${R.units}</span><input type="number" id="wlQty" min="0" step="any" placeholder="${WL.role === 'editor' ? 'e.g. 12.5' : 'e.g. 3'}"></label>
+          <label class="inv-field"><span>Client (optional)</span><input id="wlClient" list="wlClients" placeholder="Which client?"></label>
+          <label class="inv-field wl-note"><span>Note (optional)</span><input id="wlNote" placeholder="e.g. YouTube vlog #32"></label>
+          <button class="btn btn-primary wl-add-btn" onclick="wlAdd()">＋ Add</button>
+        </div>
+        <datalist id="wlClients">${clientNames.map(n => `<option value="${ie(n)}">`).join('')}</datalist>
+      </div>
+
+      <div class="wl-grid">${Object.entries(WL_ROLES).map(([role, r]) => {
+        const people = wlPeople(role);
+        const t = sum(role); let rolePay = 0;
+        const body = people.map(n => { const q = totals[role][n] || 0, rate = wlRate(role, n), p = q * rate; rolePay += p;
+          const own = (WL.profile.rates[role] || {})[n];
+          return `<tr><td>${ie(n)}</td><td class="num"><b>${wlFmt(q)}</b></td>
+            <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(own ?? '')}" placeholder="${ie(wlFmt(wlNum(WL.profile.defaultRate[role])))}" onchange="wlSetRate('${role}', ${ie(JSON.stringify(n))}, this.value)" aria-label="${r.rateLabel} for ${ie(n)}"></td>
+            <td class="num">${ie(wlMoney(p))}</td>
+            <td><button class="inv-item-del" title="Hide from this list" onclick="wlHide('${role}', ${ie(JSON.stringify(n))})">✕</button></td></tr>`; }).join('');
+        return `<div class="inv-card wl-card">
+          <div class="wl-card-head"><div class="inv-card-title" style="margin:0">${r.icon} ${r.label}</div>
+            <label class="wl-default">Default ${r.rateLabel.toLowerCase()}: <input type="number" min="0" step="any" value="${ie(WL.profile.defaultRate[role] ?? '')}" placeholder="0" onchange="wlSetDefault('${role}', this.value)"></label></div>
+          <div class="table-scroll"><table class="wl-table"><thead><tr><th>Name</th><th class="num">${r.units}</th><th class="num">${r.rateLabel}</th><th class="num">Pay</th><th></th></tr></thead>
+          <tbody>${body || `<tr><td colspan="5" class="wl-none">No ${r.label.toLowerCase()} yet. Add one with the form above.</td></tr>`}</tbody>
+          <tfoot><tr><td>Total</td><td class="num">${wlFmt(t)}</td><td></td><td class="num">${ie(wlMoney(rolePay))}</td><td></td></tr></tfoot></table></div>
+        </div>`; }).join('')}
+      </div>
+      <div class="wl-hint">Leave a person's pay box empty to use the default for their role. Currency:
+        <select onchange="wlSetCurrency(this.value)">${['BDT', 'USD', 'EUR', 'GBP'].map(c => `<option ${c === WL.profile.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+
+      <div class="inv-card">
+        <div class="inv-card-title">All entries this month <span class="inv-hint">${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}</span></div>
+        ${rows.length ? `<div class="table-scroll"><table class="wl-table wl-entries"><thead><tr><th>Date</th><th>Person</th><th>Work</th><th class="num">Amount</th><th>Client</th><th>Note</th><th></th></tr></thead><tbody>
+          ${rows.map(r => `<tr><td>${ie(r.work_date ? invDate(r.work_date) : '—')}</td><td>${ie(r.person)}</td><td>${ie((WL_ROLES[r.role] || {}).one || r.role)}</td>
+            <td class="num"><b>${wlFmt(r.qty)}</b> ${ie((WL_ROLES[r.role] || {}).unit || '')}${r.role !== 'editor' && wlNum(r.qty) !== 1 ? 's' : ''}</td><td>${ie(r.client || '—')}</td><td>${ie(r.note || '')}</td>
+            <td><button class="inv-item-del" title="Delete entry" onclick="wlDelete('${ie(r.id)}')">✕</button></td></tr>`).join('')}
+        </tbody></table></div>` : `<div class="wl-none">Nothing logged for this month yet.</div>`}
+      </div>`;
+    el.innerHTML = html;
+    const sel = document.getElementById('wlPerson');
+    if (sel) sel.onchange = () => { if (sel.value === '__new') wlNewPerson(); };
+  }
+
+  function wlGo(d) { WL.period = wlShift(WL.period, d); wlRender(); }
+  function wlSetRole(role) { WL.role = role; wlRender(); }
+  function wlNewPerson() {
+    const R = WL_ROLES[WL.role];
+    showPrompt(`Add a ${R.one.toLowerCase()}`, 'Their name:', '', async (name) => {
+      name = (name || '').trim(); const sel = document.getElementById('wlPerson');
+      if (!name) { if (sel) sel.selectedIndex = 0; return; }
+      const p = WL.profile.people; p[WL.role] = p[WL.role] || [];
+      if (!p[WL.role].includes(name)) p[WL.role].push(name);
+      if (WL.profile.hidden && WL.profile.hidden[WL.role]) WL.profile.hidden[WL.role] = WL.profile.hidden[WL.role].filter(x => x !== name);
+      await wlSaveProfile(); wlRender();
+      const s2 = document.getElementById('wlPerson'); if (s2) s2.value = name;
+      showToast(`${name} added`);
+    });
+  }
+  async function wlAdd() {
+    const person = document.getElementById('wlPerson').value, qty = wlNum(document.getElementById('wlQty').value);
+    const date = document.getElementById('wlDate').value;
+    if (!person || person === '__new') { showToast('Pick a person first'); return; }
+    if (!(qty > 0)) { showToast(`Enter the ${WL_ROLES[WL.role].units.toLowerCase()}`); document.getElementById('wlQty').focus(); return; }
+    const period = date ? periodKeyFor(date + 'T12:00:00') : WL.period;
+    const row = { id: 'w_' + Date.now() + '_' + Math.floor(Math.random() * 1e6), period, work_date: date || null, person, role: WL.role, qty,
+      client: document.getElementById('wlClient').value.trim() || null, note: document.getElementById('wlNote').value.trim() || null };
+    const { error } = await db.from('work_log').insert(row);
+    if (error) { showToast('Could not save: ' + error.message); return; }
+    WL.rows.unshift(row);
+    if (period !== WL.period) { WL.period = period; }
+    wlRender();
+    const s2 = document.getElementById('wlPerson'); if (s2) s2.value = person;
+    const q = document.getElementById('wlQty'); if (q) q.focus();
+    showToast(`Added ${wlFmt(qty)} ${WL_ROLES[row.role].unit}${row.role !== 'editor' && qty !== 1 ? 's' : ''} for ${person}`);
+  }
+  function wlDelete(id) {
+    const r = WL.rows.find(x => x.id === id); if (!r) return;
+    showConfirm('Delete entry?', `${r.person}: ${wlFmt(r.qty)} ${WL_ROLES[r.role].unit} on ${r.work_date ? invDate(r.work_date) : 'no date'}`, 'Delete', async () => {
+      const { error } = await db.from('work_log').delete().eq('id', id);
+      if (error) { showToast('Could not delete: ' + error.message); return; }
+      WL.rows = WL.rows.filter(x => x.id !== id); wlRender(); showToast('Entry deleted');
+    }, true);
+  }
+  async function wlSetRate(role, name, v) { WL.profile.rates[role] = WL.profile.rates[role] || {}; if (v === '') delete WL.profile.rates[role][name]; else WL.profile.rates[role][name] = wlNum(v); await wlSaveProfile(); wlRender(); }
+  async function wlSetDefault(role, v) { WL.profile.defaultRate[role] = v === '' ? '' : wlNum(v); await wlSaveProfile(); wlRender(); }
+  async function wlSetCurrency(c) { WL.profile.currency = c; await wlSaveProfile(); wlRender(); }
+  async function wlHide(role, name) {
+    WL.profile.hidden = WL.profile.hidden || {}; WL.profile.hidden[role] = [...new Set([...(WL.profile.hidden[role] || []), name])];
+    WL.profile.people[role] = (WL.profile.people[role] || []).filter(x => x !== name);
+    await wlSaveProfile(); wlRender(); showToast(`${name} hidden (their past entries are kept)`);
+  }
+  function wlCsv() {
+    const pk = WL.period, rows = WL.rows.filter(r => r.period === pk);
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const lines = [['Summary for ' + periodKeyToLabel(pk)], [], ['Role', 'Name', 'Amount', 'Unit', 'Pay rate', 'Pay (' + WL.profile.currency + ')']];
+    Object.entries(WL_ROLES).forEach(([role, R]) => {
+      const t = {}; rows.filter(r => r.role === role).forEach(r => t[r.person] = (t[r.person] || 0) + wlNum(r.qty));
+      Object.entries(t).sort().forEach(([n, v]) => lines.push([R.one, n, v, R.unit, wlRate(role, n), Math.round(v * wlRate(role, n) * 100) / 100]));
+    });
+    lines.push([], ['All entries'], ['Date', 'Name', 'Role', 'Amount', 'Unit', 'Client', 'Note']);
+    rows.slice().reverse().forEach(r => lines.push([r.work_date || '', r.person, (WL_ROLES[r.role] || {}).one || r.role, r.qty, (WL_ROLES[r.role] || {}).unit || '', r.client || '', r.note || '']));
+    const csv = '﻿' + lines.map(l => l.map(q).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `work-log-${pk}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    showToast('Downloaded — opens in Excel or Google Sheets');
   }
 
   async function init() {
