@@ -61,6 +61,11 @@ create table if not exists work_log (
   client text, note text, created_at timestamptz default now()
 );
 alter table settings add column if not exists work_profile jsonb;
+-- Editor pay per project: minutes edited, optional special rate, extra for advanced projects (admin only)
+create table if not exists project_pay (
+  project_id text primary key, minutes numeric, rate numeric, extra numeric, note text,
+  updated_at timestamptz default now()
+);
 -- Your business details, payment info and saved client emails for invoices (admin only)
 alter table settings add column if not exists invoice_profile jsonb;
 
@@ -194,14 +199,14 @@ do $$
 declare t text;
 begin
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log',
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay',
     'crm_secrets','crm_sessions','crm_login_attempts'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists admin_all on %I', t);
   end loop;
   -- Admin can do everything on the app tables
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log'] loop
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay'] loop
     execute format($p$create policy admin_all on %I for all to authenticated
       using (crm_role() = 'admin') with check (crm_role() = 'admin')$p$, t);
   end loop;
@@ -213,15 +218,43 @@ begin
   end loop;
 end $$;
 
--- Projects: editors see all (leaderboard), edit their own; clients see/edit only theirs
+-- Projects: editors never touch the table directly, so the client name can't reach them.
+-- They read through crm_editor_projects() (client removed) and save through crm_editor_save().
 drop policy if exists editor_read on projects;
-create policy editor_read on projects for select to authenticated using (crm_role() = 'editor');
 drop policy if exists editor_write on projects;
-create policy editor_write on projects for update to authenticated
-  using (crm_role() = 'editor' and editor = crm_name()) with check (crm_role() = 'editor' and editor = crm_name());
 drop policy if exists editor_insert on projects;
-create policy editor_insert on projects for insert to authenticated
-  with check (crm_role() = 'editor' and editor = crm_name());
+
+create or replace function crm_editor_projects() returns setof jsonb
+language sql stable security definer set search_path = public as
+$$ select to_jsonb(p) - 'client' from projects p where crm_role() = 'editor' $$;
+
+create or replace function crm_editor_save(p_rows jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare r jsonb; me text := crm_name();
+begin
+  if crm_role() is distinct from 'editor' then raise exception 'Editors only'; end if;
+  for r in select * from jsonb_array_elements(coalesce(p_rows, '[]'::jsonb)) loop
+    if exists (select 1 from projects where id = r->>'id') then
+      -- only the fields an editor may change, and only on their own projects
+      update projects set
+        raw_file      = case when r ? 'raw_file'      then r->'raw_file'      else raw_file end,
+        status        = case when r ? 'status'        then r->>'status'       else status end,
+        final_video   = case when r ? 'final_video'   then r->'final_video'   else final_video end,
+        frameio       = case when r ? 'frameio'       then r->'frameio'       else frameio end,
+        notes         = case when r ? 'notes'         then r->'notes'         else notes end,
+        custom_fields = case when r ? 'custom_fields' then r->'custom_fields' else custom_fields end,
+        updated_at    = now()
+      where id = r->>'id' and editor = me;
+    else
+      insert into projects (id, period, raw_file, editor, status, final_video, notes, custom_fields, created_at, created_by)
+      values (r->>'id', r->>'period', r->'raw_file', me, coalesce(r->>'status', 'Assigned'), r->'final_video', r->'notes',
+              r->'custom_fields', r->>'created_at', 'editor:' || me);
+    end if;
+  end loop;
+end $$;
+revoke execute on function crm_editor_projects(), crm_editor_save(jsonb) from public, anon;
+grant execute on function crm_editor_projects(), crm_editor_save(jsonb) to authenticated;
+
 drop policy if exists client_read on projects;
 create policy client_read on projects for select to authenticated
   using (crm_role() = 'client' and client = crm_name());
@@ -254,7 +287,7 @@ end $$;
 -- Table permissions (the rules above then decide which rows each person gets)
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on settings, period_settings, columns, projects, teams, individuals,
-  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices, work_log to authenticated;
+  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices, work_log, project_pay to authenticated;
 revoke all on crm_secrets, crm_sessions, crm_login_attempts from authenticated, anon;
 -- Logged-out visitors get nothing
 revoke all on all tables in schema public from anon;

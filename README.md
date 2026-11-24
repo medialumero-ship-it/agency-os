@@ -27,10 +27,21 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 
 ## Work Log (admin only)
 
-- Open the **Work Log** tab. Pick **Editor**, **Designer** or **Scriptwriter**, choose the person, then enter the minutes edited, thumbnails made or scripts written. Client and note are optional. Click **＋ Add**.
-- Editors come from your teams automatically. Add designers and scriptwriters with **＋ Add a new…** in the person list.
-- Set a **default pay** per minute, thumbnail or script for each role, or a different rate for one person. The page then works out what each person is owed for the month.
-- Use **‹ ›** to switch months, and **⬇ Download month (Excel)** to get the totals and every entry as a spreadsheet.
+**Editors (paid per project)**
+- On the **Editors** board, set each project's **Client** while you assign the editor. Only admins see the Client column. Editors never receive client names at all.
+- In **Work Log**, every project assigned that month is listed under its editor. Type the **minutes**, and the pay is worked out automatically.
+- Rates are used in this order:
+  1. a rate typed on that one project
+  2. the editor's special rate for that client (under **⚙ Rates**)
+  3. the editor's usual rate
+  4. the default rate for all editors
+- Add an **Extra** amount on any project that needs bonus pay, such as an advanced edit.
+
+**Designers and scriptwriters**
+- Pick **Designer** or **Scriptwriter**, choose the person (or **＋ Add a new…**), enter thumbnails or scripts, then click **＋ Add**. Set a default pay per thumbnail or script, or a different rate per person.
+
+**Month-end**
+- Use **‹ ›** to switch months. **⬇ Download month (Excel)** gives every editor project with minutes, rate, extra and pay, plus designer and writer totals.
 
 ## Who sees what
 
@@ -40,6 +51,7 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 | Revenue, points, who's assigned | ✅ edit | view only | – |
 | Finance, salaries, expenses, leads | ✅ | – | – |
 | Invoices, Work Log (minutes, thumbnails, scripts, pay) | ✅ | – | – |
+| Which client a project is for | ✅ | – | their own |
 | Logins | ✅ | their own | their own |
 
 These rules are enforced by the database, not just hidden on screen.

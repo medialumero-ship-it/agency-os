@@ -1164,6 +1164,7 @@
     .inv-item { grid-template-columns: 1fr 1fr 30px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); }
     .inv-item input:first-child { grid-column: 1 / -1; } .inv-item-amt { grid-column: 1 / 3; text-align:left; }
   }
+  .client-pill { display:inline-flex; align-items:center; padding:5px 10px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-weight:600; font-size:13px; white-space:nowrap; }
   /* ===== Work log ===== */
   .wl-lock { background: var(--accent-soft); color: var(--text-dim); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; }
   .wl-period { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
@@ -1187,6 +1188,18 @@
   .wl-table .num { text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
   .wl-table tfoot td { font-weight:700; border-bottom:0; border-top:2px solid var(--border-bright); }
   .wl-none { color:var(--text-muted); font-size:14px; text-align:center; padding:16px; }
+  .wl-editors { margin-bottom:14px; }
+  .wl-help { font-size:13.5px; color:var(--text-dim); background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:12px; line-height:1.55; }
+  .wl-ed { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:12px; }
+  .wl-ed-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; font-size:15px; }
+  .wl-ed-right { display:flex; align-items:center; gap:10px; } .wl-ed-right b { font-size:16px; color:var(--accent); }
+  .wl-muted { color:var(--text-muted); font-weight:500; }
+  .wl-special { border-color: var(--accent) !important; background: var(--accent-soft) !important; }
+  .wl-rates { background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; margin-bottom:10px; font-size:13.5px; color:var(--text-dim); display:flex; flex-direction:column; gap:8px; }
+  .wl-rates input, .wl-rates select { width:90px; padding:6px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; font-size:13.5px; background:#fff; color:var(--text); }
+  .wl-rates select { width:auto; min-width:160px; }
+  .wl-rates-sub { font-weight:600; margin-top:4px; }
+  .wl-rate-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .wl-hint { font-size:13px; color:var(--text-muted); margin:10px 2px 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .wl-hint select { padding:4px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; background:#fff; color:var(--text); }
   @media (max-width: 1100px) { .wl-form { grid-template-columns: 1fr 1fr 1fr; } .wl-note { grid-column: span 2; } .wl-form .inv-field { margin-bottom:12px; } .wl-add-btn { margin-bottom:12px; } }
@@ -1450,6 +1463,7 @@
   const DEFAULT_COLUMNS = [
     { id:'rawFile', label:'Raw Footage', type:'links', adminOnly:false, locked:true, editorEditable:true },
     { id:'editor', label:'Editor', type:'editor', adminOnly:false, locked:true, editorEditable:false },
+    { id:'client', label:'Client', type:'client', adminOnly:true, locked:true, editorEditable:false },
     { id:'revenue', label:'Revenue', type:'revenue', adminOnly:true, locked:true, editorEditable:false },
     { id:'points', label:'Points', type:'points', adminOnly:false, locked:true, editorEditable:false },
     { id:'status', label:'Status', type:'status', adminOnly:false, locked:true, editorEditable:true },
@@ -1619,7 +1633,7 @@
         isAdmin() ? db.from('settings').select('*').eq('id', 'main').maybeSingle() : db.rpc('crm_public_settings'),
         db.from('period_settings').select('*'),
         db.from('columns').select('*').order('sort_order'),
-        db.from('projects').select('*'),
+        isEditor() ? db.rpc('crm_editor_projects') : db.from('projects').select('*'),
         db.from('teams').select('*').order('sort_order'),
         db.from('individuals').select('*').order('sort_order'),
         db.from('editor_accounts').select('*'),
@@ -1840,9 +1854,13 @@
           d.updated_at = now;
           return d;
         });
-        ops.push(db.from('projects').upsert(dbRows, { onConflict: 'id' }));
+        if (isEditor()) {
+          ops.push(db.rpc('crm_editor_save', { p_rows: dbRows.map(d => { const { client, ...rest } = d; return rest; }) }));
+        } else {
+          ops.push(db.from('projects').upsert(dbRows, { onConflict: 'id' }));
+        }
       }
-      if (rowDiff.remove.length) ops.push(db.from('projects').delete().in('id', rowDiff.remove));
+      if (rowDiff.remove.length && !isEditor()) ops.push(db.from('projects').delete().in('id', rowDiff.remove));
 
       // 5. Teams
       const teamDiff = _diffByKey(data.teams||[], _lastSaved.teams||[], 'id');
@@ -2170,7 +2188,19 @@
     }
   }
 
+  let _editorPoll = null;
+  async function refreshEditorProjects() {
+    if (!isEditor() || isSaving || pendingSave || !_lastSaved) return;
+    if (document.querySelector('.cell-input') || document.querySelector('.dropdown-menu')) return;
+    if (JSON.stringify(data.rows) !== JSON.stringify(_lastSaved.rows)) return;   // unsaved local change
+    const { data: list, error } = await db.rpc('crm_editor_projects');
+    if (error || !Array.isArray(list)) return;
+    const fresh = list.map(r => { const row = _dbToJs(r, PROJECT_FIELDS); if (r.custom_fields && typeof r.custom_fields === 'object') Object.assign(row, r.custom_fields); return row; });
+    if (JSON.stringify(fresh) === JSON.stringify(data.rows)) return;
+    data.rows = fresh; _lastSaved.rows = JSON.parse(JSON.stringify(fresh)); _queueRender();
+  }
   function startAutoRefresh() {
+    if (isEditor() && !_editorPoll) _editorPoll = setInterval(refreshEditorProjects, 20000);
     if (_realtimeChannel) return;
     const tables = ['projects','columns','expenses','leads','teams','individuals',
                     'settings','period_settings','editor_accounts','client_accounts',
@@ -2186,6 +2216,7 @@
     });
   }
   function stopAutoRefresh() {
+    if (_editorPoll) { clearInterval(_editorPoll); _editorPoll = null; }
     if (_realtimeChannel) { db.removeChannel(_realtimeChannel); _realtimeChannel = null; }
   }
 
@@ -2705,6 +2736,7 @@
     if (page === 'worklog' && (!isAdmin() || foodOnlyMode() || leadsOnlyMode())) return;
     if (page === 'leaderboard' && isClient()) return;
     currentPage = page;
+    if (page === 'worklog' && typeof WL !== 'undefined') WL.mounted = false;
     try { localStorage.setItem('agency_os_page', page); } catch(e) {}
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
@@ -4148,6 +4180,11 @@
       const click = editable ? `onclick="openEditorDropdown(event,'${r.id}')"` : '';
       return `<td><div class="editor-cell" ${click} style="${editable?'':'cursor:default'}">${inner}</div></td>`;
     }
+    if (c.type === 'client') {
+      if (!isAdmin()) return '<td></td>';
+      const inner = val ? `<span class="client-pill">${escapeHtml(val)}</span>` : `<span class="cell-empty">Set client</span>`;
+      return `<td><div class="editor-cell" onclick="openClientDropdown(event,'${r.id}')" title="Only admins can see this">${inner}</div></td>`;
+    }
     if (c.type === 'status') {
       const s = val || 'Assigned';
       const click = editable ? `onclick="openStatusDropdown(event,'${r.id}')"` : '';
@@ -4686,6 +4723,37 @@
 
   let openMenu = null;
   function closeMenus() { if (openMenu) { openMenu.remove(); openMenu = null; } document.querySelectorAll('.dropdown-menu, .mini-calendar').forEach(m => m.remove()); }
+  let _clientMenuNames = [];
+  function knownClientNames() {
+    const set = new Set();
+    (data.clientAccounts || []).forEach(c => c.name && set.add(c.name));
+    (data.rows || []).forEach(r => r.client && set.add(r.client));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+  function openClientDropdown(e, rowId) {
+    if (!isAdmin()) return;
+    e.stopPropagation(); closeMenus();
+    const r = data.rows.find(x => x.id === rowId); if (!r) return;
+    _clientMenuNames = knownClientNames();
+    const menu = document.createElement('div'); menu.className = 'dropdown-menu';
+    menu.innerHTML = `<div style="padding:6px 12px 8px;font-size:12px;color:var(--text-muted)">🔒 Editors can't see the client</div>` +
+      _clientMenuNames.map((name, i) => `<div class="dropdown-item" onclick="setRowClient('${rowId}', ${i})"><span>${escapeHtml(name)}</span></div>`).join('') +
+      (r.client ? `<div class="dropdown-item" onclick="setRowClient('${rowId}', -1)" style="color:var(--text-muted)">✕ Clear</div>` : '') +
+      `<div class="dropdown-divider"></div><div class="dropdown-add" onclick="newRowClient('${rowId}')">＋ New client name</div>`;
+    document.body.appendChild(menu); positionMenu(menu, e); openMenu = menu;
+  }
+  async function setRowClient(rowId, idx) {
+    const r = data.rows.find(x => x.id === rowId); if (!r) return;
+    pushUndo(); r.client = idx >= 0 ? _clientMenuNames[idx] : null; closeMenus(); renderActiveCRM(); await saveData();
+  }
+  function newRowClient(rowId) {
+    closeMenus();
+    showPrompt('Client for this project', 'Client name:', '', async (name) => {
+      name = (name || '').trim(); if (!name) return;
+      const r = data.rows.find(x => x.id === rowId); if (!r) return;
+      pushUndo(); r.client = name; renderActiveCRM(); await saveData();
+    });
+  }
   function openEditorDropdown(e, rowId) {
     if (!isAdmin()) return;
     e.stopPropagation(); closeMenus();
@@ -5186,7 +5254,7 @@
 
     const search = (document.getElementById('clientSearch') || {}).value || '';
     // Use admin's master columns (Raw Footage, Editor, Revenue, Points, Status, Deadline, Video Link, Notes)
-    const cols = data.columns.filter(c => !c.adminOnly || isAdmin());
+    const cols = data.columns.filter(c => (!c.adminOnly || isAdmin()) && c.id !== 'client');
 
     clientList.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).forEach(client => {
       const clientRows = allClientRows.filter(r => r.client && r.client.toLowerCase() === client.name.toLowerCase());
@@ -7624,6 +7692,12 @@
     if (!(await loadData())) return false;
     populateLoginDropdown();
     if (isAdmin()) {
+      // Add the admin-only Client column to boards saved before it existed
+      if (data.columns && data.columns.length && !data.columns.some(c => c.id === 'client')) {
+        const at = data.columns.findIndex(c => c.id === 'editor');
+        data.columns.splice(at >= 0 ? at + 1 : 1, 0, { id:'client', label:'Client', type:'client', adminOnly:true, locked:true, editorEditable:false });
+        await saveData();
+      }
       await rolloverIncomplete();
       await snapshotPastPeriodsOnce();
       const purged = purgeOldRecycleBin();
@@ -8047,7 +8121,7 @@
   }
 
   // ===================== WORK LOG (admin only) =====================
-  const WL = { loaded: false, rows: [], profile: null, period: null, mounted: false, role: 'editor' };
+  const WL = { loaded: false, rows: [], pay: {}, profile: null, period: null, mounted: false, role: 'designer', openRates: {} };
   const WL_ROLES = {
     editor:       { label: 'Editors',        one: 'Editor',       unit: 'min',        units: 'Minutes edited', icon: '🎬', rateLabel: 'Pay per minute' },
     designer:     { label: 'Designers',      one: 'Designer',     unit: 'thumbnail',  units: 'Thumbnails',     icon: '🖼️', rateLabel: 'Pay per thumbnail' },
@@ -8073,11 +8147,15 @@
   async function wlLoad() {
     const [l, p] = await Promise.all([
       db.from('work_log').select('*').order('work_date', { ascending: false }),
-      db.from('settings').select('work_profile').eq('id', 'main').maybeSingle()
-    ]);
-    if (l.error || p.error) { showError('Could not load the work log: ' + ((l.error || p.error).message)); return false; }
+      db.from('settings').select('work_profile').eq('id', 'main').maybeSingle(),
+      db.from('project_pay').select('*')
+    ]).then(a => { WL._payRes = a[2]; return a.slice(0, 2); });
+    const pp = WL._payRes;
+    if (l.error || p.error || pp.error) { showError('Could not load the work log: ' + ((l.error || p.error || pp.error).message)); return false; }
     WL.rows = l.data || [];
-    WL.profile = Object.assign({ currency: 'BDT', rates: { editor: {}, designer: {}, scriptwriter: {} }, defaultRate: {}, people: { designer: [], scriptwriter: [], editor: [] }, hidden: {} }, (p.data && p.data.work_profile) || {});
+    WL.pay = {}; (pp.data || []).forEach(x => WL.pay[x.project_id] = x);
+    WL.profile = Object.assign({ currency: 'BDT', rates: { editor: {}, designer: {}, scriptwriter: {} }, defaultRate: {}, people: { designer: [], scriptwriter: [], editor: [] }, hidden: {}, editorRates: {} }, (p.data && p.data.work_profile) || {});
+    WL.profile.editorRates = WL.profile.editorRates || {};
     WL.loaded = true; return true;
   }
   async function wlSaveProfile() {
@@ -8087,6 +8165,123 @@
   function wlRate(role, person) {
     const r = (WL.profile.rates[role] || {})[person];
     return r !== undefined && r !== '' ? wlNum(r) : wlNum(WL.profile.defaultRate[role]);
+  }
+
+  // ---- Editors: paid per project ----
+  const wlSet = v => v !== null && v !== undefined && v !== '';
+  function wlEditorRate(ed, client) {
+    const er = WL.profile.editorRates[ed] || {};
+    if (client && er.clients && wlSet(er.clients[client])) return { rate: wlNum(er.clients[client]), src: `${ed}'s rate for ${client}` };
+    if (wlSet(er.default)) return { rate: wlNum(er.default), src: `${ed}'s usual rate` };
+    return { rate: wlNum(WL.profile.defaultRate.editor), src: 'default editor rate' };
+  }
+  function wlProjectCalc(r) {
+    const pay = WL.pay[r.id] || {};
+    const base = wlEditorRate(r.editor, r.client);
+    const rate = wlSet(pay.rate) ? wlNum(pay.rate) : base.rate;
+    const minutes = wlNum(pay.minutes), extra = wlNum(pay.extra);
+    return { pay, base, rate, minutes, extra, total: minutes * rate + extra, special: wlSet(pay.rate) };
+  }
+  function wlEditorGroups(pk) {
+    const by = {};
+    (data.rows || []).filter(r => r.editor && (r.period || currentPeriodKey()) === pk).forEach(r => { (by[r.editor] = by[r.editor] || []).push(r); });
+    return Object.keys(by).sort((a, b) => a.localeCompare(b)).map(name => {
+      const items = by[name].map(r => ({ r, c: wlProjectCalc(r) }));
+      return { name, items, minutes: items.reduce((a, x) => a + x.c.minutes, 0), pay: items.reduce((a, x) => a + x.c.total, 0) };
+    });
+  }
+  function wlEditorSectionHtml(pk) {
+    const groups = wlEditorGroups(pk);
+    const clients = knownClientNames();
+    const blocks = groups.map((g, gi) => {
+      const er = WL.profile.editorRates[g.name] || {};
+      const open = !!WL.openRates[g.name];
+      const special = Object.entries(er.clients || {});
+      const rows = g.items.map(({ r, c }) => `
+        <tr>
+          <td>${ie(r.rawFile || 'Untitled project')}</td>
+          <td>${r.client ? `<span class="client-pill">${ie(r.client)}</span>` : '<span class="wl-muted">No client</span>'}</td>
+          <td><span class="status-pill ${statusClass(r.status || 'Assigned')}">${ie(r.status || 'Assigned')}</span></td>
+          <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(wlSet(c.pay.minutes) ? c.pay.minutes : '')}" placeholder="0" data-pid="${ie(r.id)}" data-f="minutes" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Minutes"></td>
+          <td class="num"><input class="wl-rate ${c.special ? 'wl-special' : ''}" type="number" min="0" step="any" value="${ie(c.special ? c.pay.rate : '')}" placeholder="${ie(wlFmt(c.base.rate))}" title="Empty = ${ie(c.base.src)} (${ie(wlFmt(c.base.rate))}). Type a number to use a different rate for this project only." data-pid="${ie(r.id)}" data-f="rate" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Rate per minute"></td>
+          <td class="num"><input class="wl-rate" type="number" min="0" step="any" value="${ie(wlSet(c.pay.extra) ? c.pay.extra : '')}" placeholder="0" title="Extra for an advanced project" data-pid="${ie(r.id)}" data-f="extra" oninput="wlPayInput(this)" onchange="wlPaySave(this)" aria-label="Extra"></td>
+          <td class="num"><b id="wlPay_${ie(r.id)}">${ie(wlMoney(c.total))}</b></td>
+        </tr>`).join('');
+      return `<div class="wl-ed">
+        <div class="wl-ed-head">
+          <div><b>${ie(g.name)}</b> <span class="wl-muted">· ${g.items.length} project${g.items.length === 1 ? '' : 's'} · <span id="wlEdMin_${gi}">${wlFmt(g.minutes)}</span> min</span></div>
+          <div class="wl-ed-right"><b id="wlEdPay_${gi}">${ie(wlMoney(g.pay))}</b>
+            <button class="btn btn-secondary btn-sm" onclick="wlToggleRates(${ie(JSON.stringify(g.name))})">${open ? 'Hide rates' : '⚙ Rates'}</button></div>
+        </div>
+        ${open ? `<div class="wl-rates">
+          <label>Usual rate per minute for ${ie(g.name)}:
+            <input type="number" min="0" step="any" value="${ie(wlSet(er.default) ? er.default : '')}" placeholder="${ie(wlFmt(wlNum(WL.profile.defaultRate.editor)))}" onchange="wlSetEdRate(${ie(JSON.stringify(g.name))}, null, this.value)"></label>
+          <div class="wl-rates-sub">Special rates for a client (only for ${ie(g.name)}):</div>
+          ${special.map(([cl, v]) => `<div class="wl-rate-line"><span class="client-pill">${ie(cl)}</span>
+            <input type="number" min="0" step="any" value="${ie(v)}" onchange="wlSetEdRate(${ie(JSON.stringify(g.name))}, ${ie(JSON.stringify(cl))}, this.value)"> per minute
+            <button class="inv-item-del" title="Remove" onclick="wlSetEdRate(${ie(JSON.stringify(g.name))}, ${ie(JSON.stringify(cl))}, '')">✕</button></div>`).join('') || '<div class="wl-muted" style="font-size:13px">None yet.</div>'}
+          <div class="wl-rate-line"><select id="wlNewCl_${gi}"><option value="">Choose client…</option>${clients.map(n => `<option>${ie(n)}</option>`).join('')}</select>
+            <input type="number" min="0" step="any" id="wlNewRate_${gi}" placeholder="rate"> per minute
+            <button class="btn btn-secondary btn-sm" onclick="wlAddClientRate(${gi}, ${ie(JSON.stringify(g.name))})">Add</button></div>
+        </div>` : ''}
+        <div class="table-scroll"><table class="wl-table">
+          <thead><tr><th>Project</th><th>Client</th><th>Status</th><th class="num">Minutes</th><th class="num">Rate / min</th><th class="num">Extra</th><th class="num">Pay</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>
+      </div>`;
+    }).join('');
+    return `<div class="inv-card wl-editors">
+      <div class="wl-card-head"><div class="inv-card-title" style="margin:0">🎬 Editors · paid per project</div>
+        <label class="wl-default">Default rate per minute (all editors): <input type="number" min="0" step="any" value="${ie(WL.profile.defaultRate.editor ?? '')}" placeholder="0" onchange="wlSetDefault('editor', this.value)"></label></div>
+      <div class="wl-help">Projects assigned on the <b>Editors</b> board this month show up here automatically. Type the <b>minutes</b>. The rate comes from the editor's usual rate, or their special rate for that client (set under <b>⚙ Rates</b>). To pay one project differently, type a rate in its box. Use <b>Extra</b> for advanced projects.</div>
+      ${blocks || `<div class="wl-none">No projects assigned to editors in this month yet. Assign them on the Editors board and set the client there.</div>`}
+    </div>`;
+  }
+  function wlRecalcEditors() {
+    const groups = wlEditorGroups(WL.period);
+    groups.forEach((g, gi) => {
+      g.items.forEach(({ r, c }) => { const el = document.getElementById('wlPay_' + r.id); if (el) el.textContent = wlMoney(c.total); });
+      const m = document.getElementById('wlEdMin_' + gi); if (m) m.textContent = wlFmt(g.minutes);
+      const pe = document.getElementById('wlEdPay_' + gi); if (pe) pe.textContent = wlMoney(g.pay);
+    });
+    wlUpdateTiles();
+  }
+  function wlTotals(pk) {
+    const rows = WL.rows.filter(r => r.period === pk);
+    const groups = wlEditorGroups(pk);
+    const manual = role => rows.filter(r => r.role === role).reduce((a, r) => a + wlNum(r.qty), 0);
+    const manualPay = role => rows.filter(r => r.role === role).reduce((a, r) => a + wlNum(r.qty) * wlRate(role, r.person), 0);
+    const edMin = groups.reduce((a, g) => a + g.minutes, 0) + manual('editor');
+    const edPay = groups.reduce((a, g) => a + g.pay, 0) + manualPay('editor');
+    return { edMin, thumbs: manual('designer'), scripts: manual('scriptwriter'), pay: edPay + manualPay('designer') + manualPay('scriptwriter') };
+  }
+  function wlUpdateTiles() {
+    const t = wlTotals(WL.period);
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('wlTileMin', wlFmt(t.edMin)); set('wlTilePay', wlMoney(t.pay));
+  }
+  function wlPayInput(el) {
+    const pid = el.dataset.pid; WL.pay[pid] = Object.assign({ project_id: pid }, WL.pay[pid] || {});
+    WL.pay[pid][el.dataset.f] = el.value === '' ? null : wlNum(el.value);
+    if (el.dataset.f === 'rate') el.classList.toggle('wl-special', el.value !== '');
+    wlRecalcEditors();
+  }
+  async function wlPaySave(el) {
+    const rec = WL.pay[el.dataset.pid]; if (!rec) return;
+    const { error } = await db.from('project_pay').upsert({ project_id: rec.project_id, minutes: rec.minutes ?? null, rate: rec.rate ?? null, extra: rec.extra ?? null, updated_at: new Date().toISOString() }, { onConflict: 'project_id' });
+    if (error) showToast('Could not save: ' + error.message);
+  }
+  function wlToggleRates(name) { WL.openRates[name] = !WL.openRates[name]; wlRender(); }
+  async function wlSetEdRate(ed, client, v) {
+    const er = WL.profile.editorRates[ed] = WL.profile.editorRates[ed] || {};
+    if (client === null) { er.default = v === '' ? null : wlNum(v); }
+    else { er.clients = er.clients || {}; if (v === '') delete er.clients[client]; else er.clients[client] = wlNum(v); }
+    await wlSaveProfile(); wlRender(); showToast('Rate saved');
+  }
+  function wlAddClientRate(gi, ed) {
+    const cl = document.getElementById('wlNewCl_' + gi).value, v = document.getElementById('wlNewRate_' + gi).value;
+    if (!cl) { showToast('Choose a client'); return; }
+    if (v === '') { showToast('Type the rate per minute'); return; }
+    wlSetEdRate(ed, cl, v);
   }
 
   async function renderWorkLog() {
@@ -8103,13 +8298,13 @@
   function wlRender() {
     const el = document.getElementById('worklogContent');
     const pk = WL.period, rows = WL.rows.filter(r => r.period === pk);
-    const totals = {}; let pay = 0;
+    const totals = {};
     Object.keys(WL_ROLES).forEach(role => {
       totals[role] = {};
       rows.filter(r => r.role === role).forEach(r => { totals[role][r.person] = (totals[role][r.person] || 0) + wlNum(r.qty); });
-      Object.entries(totals[role]).forEach(([n, q]) => pay += q * wlRate(role, n));
     });
     const sum = role => Object.values(totals[role]).reduce((a, b) => a + b, 0);
+    const T = wlTotals(pk);
     const today = new Date(); const todayIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     const defDate = pk === currentPeriodKey() ? todayIso : '';
     const R = WL_ROLES[WL.role];
@@ -8125,15 +8320,16 @@
         <button class="btn btn-secondary btn-sm" onclick="wlCsv()">⬇ Download month (Excel)</button>
       </div>
       <div class="inv-stats wl-stats">
-        <div class="inv-stat"><span>🎬 Minutes edited</span><b>${wlFmt(sum('editor'))}</b></div>
+        <div class="inv-stat"><span>🎬 Minutes edited</span><b id="wlTileMin">${wlFmt(T.edMin)}</b></div>
         <div class="inv-stat"><span>🖼️ Thumbnails</span><b>${wlFmt(sum('designer'))}</b></div>
         <div class="inv-stat"><span>✍️ Scripts</span><b>${wlFmt(sum('scriptwriter'))}</b></div>
-        <div class="inv-stat"><span>💰 Total to pay</span><b style="color:var(--accent)">${ie(wlMoney(pay))}</b></div>
+        <div class="inv-stat"><span>💰 Total to pay</span><b id="wlTilePay" style="color:var(--accent)">${ie(wlMoney(T.pay))}</b></div>
       </div>
+      ${wlEditorSectionHtml(pk)}
 
       <div class="inv-card wl-add">
-        <div class="inv-card-title">Add work</div>
-        <div class="wl-role-tabs">${Object.entries(WL_ROLES).map(([k, r]) => `<button class="wl-role ${k === WL.role ? 'active' : ''}" onclick="wlSetRole('${k}')">${r.icon} ${r.one}</button>`).join('')}</div>
+        <div class="inv-card-title">Add thumbnails or scripts</div>
+        <div class="wl-role-tabs">${Object.entries(WL_ROLES).filter(([k]) => k !== 'editor').map(([k, r]) => `<button class="wl-role ${k === WL.role ? 'active' : ''}" onclick="wlSetRole('${k}')">${r.icon} ${r.one}</button>`).join('')}</div>
         <div class="wl-form">
           <label class="inv-field"><span>Date</span><input type="date" id="wlDate" value="${defDate}"></label>
           <label class="inv-field"><span>${R.one}</span><select id="wlPerson">${wlPeople(WL.role).map(n => `<option>${ie(n)}</option>`).join('')}<option value="__new">＋ Add a new ${R.one.toLowerCase()}…</option></select></label>
@@ -8145,7 +8341,7 @@
         <datalist id="wlClients">${clientNames.map(n => `<option value="${ie(n)}">`).join('')}</datalist>
       </div>
 
-      <div class="wl-grid">${Object.entries(WL_ROLES).map(([role, r]) => {
+      <div class="wl-grid">${Object.entries(WL_ROLES).filter(([role]) => role !== 'editor' || rows.some(x => x.role === 'editor')).map(([role, r]) => {
         const people = wlPeople(role);
         const t = sum(role); let rolePay = 0;
         const body = people.map(n => { const q = totals[role][n] || 0, rate = wlRate(role, n), p = q * rate; rolePay += p;
@@ -8234,7 +8430,15 @@
       const t = {}; rows.filter(r => r.role === role).forEach(r => t[r.person] = (t[r.person] || 0) + wlNum(r.qty));
       Object.entries(t).sort().forEach(([n, v]) => lines.push([R.one, n, v, R.unit, wlRate(role, n), Math.round(v * wlRate(role, n) * 100) / 100]));
     });
-    lines.push([], ['All entries'], ['Date', 'Name', 'Role', 'Amount', 'Unit', 'Client', 'Note']);
+    const groups = wlEditorGroups(pk);
+    if (groups.length) {
+      lines.push([], ['Editors — per project'], ['Editor', 'Project', 'Client', 'Status', 'Minutes', 'Rate per minute', 'Extra', 'Pay (' + WL.profile.currency + ')']);
+      groups.forEach(g => {
+        g.items.forEach(({ r, c }) => lines.push([g.name, r.rawFile || '', r.client || '', r.status || '', c.minutes, c.rate, c.extra, Math.round(c.total * 100) / 100]));
+        lines.push([g.name + ' total', '', '', '', g.minutes, '', '', Math.round(g.pay * 100) / 100]);
+      });
+    }
+    lines.push([], ['Thumbnails & scripts — all entries'], ['Date', 'Name', 'Role', 'Amount', 'Unit', 'Client', 'Note']);
     rows.slice().reverse().forEach(r => lines.push([r.work_date || '', r.person, (WL_ROLES[r.role] || {}).one || r.role, r.qty, (WL_ROLES[r.role] || {}).unit || '', r.client || '', r.note || '']));
     const csv = '﻿' + lines.map(l => l.map(q).join(',')).join('\r\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
