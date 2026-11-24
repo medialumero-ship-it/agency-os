@@ -1292,9 +1292,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script>
-  // ⚙️ SETUP: Replace with your Supabase project URL and anon/public key
-  const SUPABASE_URL = '';
-  const SUPABASE_KEY = '';
+  // Public project URL + publishable key (safe to be public — the database rules protect the data)
+  const SUPABASE_URL = 'https://uxzcfocvkqlxhosdkxec.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_gRF1ZFJb-_Z1xesf8LIoHw_TPMtucp1';
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 </script>
 <script>
@@ -2268,8 +2268,15 @@
   function isClient() { return session && session.role === 'client'; }
   function editorName() { return session && session.editorName ? session.editorName : ''; }
   function clientName() { return session && session.clientName ? session.clientName : ''; }
+  // ===== AI robot switch: set to true after deploying supabase/functions/ai-robot (see README) =====
+  const AI_ROBOT_ENABLED = false;
+  async function askRobot(opts) {
+    if (!AI_ROBOT_ENABLED) return { data: { reply: 'The AI assistant is switched off for now.' }, error: null };
+    return db.functions.invoke('ai-robot', opts);
+  }
   // ===== Robot login greeting (AI-powered) =====
   async function robotLoginGreeting() {
+    if (!AI_ROBOT_ENABLED) return;
     const pk = activePeriodKey();
     let greetPrompt, greetRole;
     const lsKey = 'rb_lastGreet_' + (editorName() || clientName() || 'admin');
@@ -2287,6 +2294,9 @@
       const daysLeft = urgentDl ? Math.ceil((new Date(urgentDl+'T23:59:59') - new Date())/(1000*60*60*24)) : null;
 
       const hasOverdue = daysLeft !== null && daysLeft <= 1;
+      const hasUrgent = daysLeft !== null && daysLeft <= 3;
+      const noWork = active.length === 0;
+      const doingGood = !hasOverdue && done.length >= 3 && done.length >= active.length;
 
       if (!hasOverdue && daysSinceLast < 2) return;
 
@@ -2341,7 +2351,7 @@
         });
         greetCrmData = { otherEditors };
       }
-      const { data: res, error } = await db.functions.invoke('ai-robot', {
+      const { data: res, error } = await askRobot({
         body: { message: greetPrompt, role: greetRole, crmData: greetCrmData }
       });
       if (error) throw error;
@@ -2460,7 +2470,7 @@
         });
       }
 
-      const { data: res, error } = await db.functions.invoke('ai-robot', {
+      const { data: res, error } = await askRobot({
         body: {
           message: `Editor "${myName}" asks: ${q}`,
           role: 'editor',
@@ -3369,7 +3379,7 @@
       const rows = data.rows.filter(r => (r.period || currentPeriodKey()) === pk).map(r => ({
         editor: r.editor, status: r.status, deadline: r.deadline, revenue: r.revenue, points: r.points
       }));
-      const { data: res, error } = await db.functions.invoke('ai-robot', {
+      const { data: res, error } = await askRobot({
         body: { message: q, role: 'admin', crmData: { period: pk, projects: rows } }
       });
       if (error) throw error;

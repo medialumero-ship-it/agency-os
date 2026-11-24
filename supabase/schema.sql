@@ -238,6 +238,11 @@ begin
   end loop;
 end $$;
 
+-- Table permissions (the rules above then decide which rows each person gets)
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on settings, period_settings, columns, projects, teams, individuals,
+  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history to authenticated;
+revoke all on crm_secrets, crm_sessions, crm_login_attempts from authenticated, anon;
 -- Logged-out visitors get nothing
 revoke all on all tables in schema public from anon;
 
