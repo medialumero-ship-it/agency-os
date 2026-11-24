@@ -66,6 +66,11 @@ create table if not exists project_pay (
   project_id text primary key, minutes numeric, rate numeric, extra numeric, note text,
   updated_at timestamptz default now()
 );
+-- Client payments per project: done projects are unpaid until marked paid (admin only)
+create table if not exists project_billing (
+  project_id text primary key, paid boolean default false, paid_at timestamptz, invoice_id text,
+  updated_at timestamptz default now()
+);
 -- Your business details, payment info and saved client emails for invoices (admin only)
 alter table settings add column if not exists invoice_profile jsonb;
 
@@ -199,14 +204,14 @@ do $$
 declare t text;
 begin
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay',
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay','project_billing',
     'crm_secrets','crm_sessions','crm_login_attempts'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists admin_all on %I', t);
   end loop;
   -- Admin can do everything on the app tables
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay'] loop
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log','project_pay','project_billing'] loop
     execute format($p$create policy admin_all on %I for all to authenticated
       using (crm_role() = 'admin') with check (crm_role() = 'admin')$p$, t);
   end loop;
@@ -287,7 +292,7 @@ end $$;
 -- Table permissions (the rules above then decide which rows each person gets)
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on settings, period_settings, columns, projects, teams, individuals,
-  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices, work_log, project_pay to authenticated;
+  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices, work_log, project_pay, project_billing to authenticated;
 revoke all on crm_secrets, crm_sessions, crm_login_attempts from authenticated, anon;
 -- Logged-out visitors get nothing
 revoke all on all tables in schema public from anon;

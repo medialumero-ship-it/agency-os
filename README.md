@@ -19,8 +19,15 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 
 ## Invoices (admin only)
 
+**Client payments**, at the top of the tab:
+- When a project is marked **Done** on the Editors board, its revenue (in US dollars) counts as **unpaid** for that client.
+- When the client pays, open the client and click **✓ Paid** on the project, or **Mark all unpaid as paid**. If you sent an invoice built with **＋ Add unpaid finished projects**, marking that invoice paid marks its projects paid too.
+- The totals show **Unpaid**, **Paid this month** and **Paid all time**.
+
+**Invoices**
+
 - Open the **Invoices** tab, then click **＋ New invoice**. Fill in the client, the lines and your payment details. The preview on the right shows exactly what the client will get.
-- **＋ Add finished projects** adds that client's *Done* projects for the selected month as invoice lines.
+- **＋ Add unpaid finished projects** adds that client's *Done* projects that haven't been paid yet.
 - **⬇ Download PDF** saves the invoice to your computer.
 - **✉ Email to client** sends the PDF straight to the client's inbox once email sending is set up (see Technical notes). Until then, it downloads the PDF and opens your own email app with the message written for you; just attach the PDF and press Send.
 - Your business details, payment info and each client's email are remembered for next time. Mark invoices as **paid** to keep the totals at the top correct.

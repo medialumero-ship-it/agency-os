@@ -1104,6 +1104,15 @@
   .inv-stat b { font-size:20px; color:var(--text); }
   .inv-empty { text-align:center; padding:60px 20px; background:var(--surface); border:1px dashed var(--border-bright); border-radius:var(--radius-lg); color:var(--text-dim); font-size:14px; line-height:1.6; }
   .inv-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .pay-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .pay-client { border-bottom:1px solid var(--border); } .pay-client:last-child { border-bottom:0; }
+  .pay-row { display:grid; grid-template-columns: minmax(0,1fr) 130px 130px 24px; gap:12px; align-items:center; padding:14px 18px; cursor:pointer; }
+  .pay-row:hover, .pay-client.open .pay-row { background:#fdf8f3; }
+  .pay-name { font-weight:700; font-size:15px; color:var(--text); min-width:0; }
+  .pay-amt { text-align:right; } .pay-amt span { display:block; font-size:12px; color:var(--text-muted); } .pay-amt b { font-size:15.5px; font-variant-numeric: tabular-nums; }
+  .pay-chev { color:var(--text-muted); text-align:center; }
+  .pay-detail { padding:4px 18px 16px; }
+  @media (max-width: 560px) { .pay-row { grid-template-columns: 1fr 1fr 20px; } .pay-name { grid-column: 1 / -1; } }
   .inv-row { display:grid; grid-template-columns: 1.6fr 1fr 1fr 1fr auto; gap:14px; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
   .inv-row:last-child { border-bottom:0; }
   .inv-row:hover { background:#fdf8f3; }
@@ -1189,6 +1198,9 @@
   .wl-table tfoot td { font-weight:700; border-bottom:0; border-top:2px solid var(--border-bright); }
   .wl-none { color:var(--text-muted); font-size:14px; text-align:center; padding:16px; }
   .wl-editors { margin-bottom:14px; }
+  .wl-fx { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:14px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:16px; }
+  .wl-fx input { width:90px; padding:6px 8px; border:1px solid var(--border-bright); border-radius:8px; font-family:inherit; font-size:15px; font-weight:700; text-align:right; background:#fff; color:var(--text); }
+  .inv-stat small { display:block; font-size:12.5px; margin-top:2px; }
   .wl-help { font-size:13.5px; color:var(--text-dim); background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:12px; line-height:1.55; }
   .wl-ed { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:12px; }
   .wl-ed-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; font-size:15px; }
@@ -1340,7 +1352,7 @@
   </div>
   <div class="page" id="page-invoices">
     <div class="section-header">
-      <div><div class="section-title">Invoices</div><div class="section-sub">Create an invoice, download it as a PDF, or email it to your client</div></div>
+      <div><div class="section-title">Invoices</div><div class="section-sub">See what each client owes and has paid, and create invoices to send</div></div>
     </div>
     <div id="invoicesContent"></div>
   </div>
@@ -2737,6 +2749,7 @@
     if (page === 'leaderboard' && isClient()) return;
     currentPage = page;
     if (page === 'worklog' && typeof WL !== 'undefined') WL.mounted = false;
+    if (page === 'invoices' && typeof INV !== 'undefined') INV.mounted = false;
     try { localStorage.setItem('agency_os_page', page); } catch(e) {}
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
@@ -7708,7 +7721,7 @@
   }
 
   // ===================== INVOICES (admin only) =====================
-  const INV = { loaded: false, list: [], profile: null, cur: null, mounted: false };
+  const INV = { loaded: false, list: [], billing: {}, profile: null, cur: null, mounted: false, openClient: null };
   const INV_CURRENCIES = ['USD','EUR','GBP','CAD','AUD','BDT','INR','AED'];
   const ie = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const invToday = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
@@ -7734,12 +7747,14 @@
   }
 
   async function invLoad() {
-    const [l, p] = await Promise.all([
+    const [l, p, b] = await Promise.all([
       db.from('invoices').select('*').order('created_at', { ascending: false }),
-      db.from('settings').select('invoice_profile').eq('id', 'main').maybeSingle()
+      db.from('settings').select('invoice_profile').eq('id', 'main').maybeSingle(),
+      db.from('project_billing').select('*')
     ]);
-    if (l.error || p.error) { showError('Could not load invoices: ' + ((l.error||p.error).message)); return false; }
+    if (l.error || p.error || b.error) { showError('Could not load invoices: ' + ((l.error||p.error||b.error).message)); return false; }
     INV.list = l.data || [];
+    INV.billing = {}; (b.data || []).forEach(x => INV.billing[x.project_id] = x);
     INV.profile = Object.assign({ business:{ name:'', email:'', phone:'', address:'', logo:'' }, payment:'', notes:'Thank you for your business!', currency:'USD', taxPct:0, dueDays:14, clients:{} }, (p.data && p.data.invoice_profile) || {});
     INV.loaded = true; return true;
   }
@@ -7758,20 +7773,79 @@
     INV.cur ? invRenderEditor() : invRenderList();
   }
 
+  // ---------- Client payments: Done projects are unpaid until marked paid ----------
+  const invUsd = n => '$' + (Math.round(invNum(n) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const invIsPaid = id => !!(INV.billing[id] && INV.billing[id].paid);
+  function invDoneProjects() { return (data.rows || []).filter(r => r.status === 'Done'); }
+  function invPaymentGroups() {
+    const by = {};
+    invDoneProjects().forEach(r => { const k = (r.client || '').trim() || '—'; (by[k] = by[k] || []).push(r); });
+    return Object.keys(by).map(name => {
+      const items = by[name].sort((a, b) => String(b.period || '').localeCompare(String(a.period || '')));
+      const unpaid = items.filter(r => !invIsPaid(r.id)).reduce((a, r) => a + invNum(r.revenue), 0);
+      const paid = items.filter(r => invIsPaid(r.id)).reduce((a, r) => a + invNum(r.revenue), 0);
+      return { name, items, unpaid, paid, open: items.filter(r => !invIsPaid(r.id)).length };
+    }).sort((a, b) => b.unpaid - a.unpaid || a.name.localeCompare(b.name));
+  }
+  function invPaymentsHtml() {
+    const groups = invPaymentGroups(), cur = currentPeriodKey();
+    const unpaid = groups.reduce((a, g) => a + g.unpaid, 0), paidAll = groups.reduce((a, g) => a + g.paid, 0);
+    const paidMonth = invDoneProjects().filter(r => invIsPaid(r.id) && INV.billing[r.id].paid_at && periodKeyFor(INV.billing[r.id].paid_at) === cur).reduce((a, r) => a + invNum(r.revenue), 0);
+    const openCount = groups.reduce((a, g) => a + g.open, 0);
+    const rowsHtml = groups.map((g, gi) => {
+      const open = INV.openClient === g.name;
+      return `<div class="pay-client ${open ? 'open' : ''}">
+        <div class="pay-row" onclick="invToggleClient(${gi})">
+          <div class="pay-name">${g.name === '—' ? '<span class="wl-muted">No client set</span>' : ie(g.name)}<span class="wl-muted"> · ${g.items.length} done project${g.items.length === 1 ? '' : 's'}</span></div>
+          <div class="pay-amt"><span>Unpaid</span><b style="color:${g.unpaid ? 'var(--red)' : 'var(--text-muted)'}">${ie(invUsd(g.unpaid))}</b></div>
+          <div class="pay-amt"><span>Paid</span><b style="color:var(--ok)">${ie(invUsd(g.paid))}</b></div>
+          <div class="pay-chev">${open ? '▴' : '▾'}</div>
+        </div>
+        ${open ? `<div class="pay-detail">
+          ${g.open ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-secondary btn-sm" onclick="invMarkClientPaid(${gi})">✓ Mark all unpaid as paid (${ie(invUsd(g.unpaid))})</button></div>` : ''}
+          <div class="table-scroll"><table class="wl-table"><thead><tr><th>Month</th><th>Project</th><th>Editor</th><th class="num">Amount</th><th>Payment</th><th></th></tr></thead><tbody>
+          ${g.items.map(r => { const b = INV.billing[r.id], paid = invIsPaid(r.id); return `<tr>
+            <td>${ie(periodKeyToLabel(r.period || cur).replace(/ \d{4}$/, ''))}</td><td>${ie(r.rawFile || 'Untitled project')}</td><td>${ie(r.editor || '—')}</td>
+            <td class="num"><b>${invNum(r.revenue) ? ie(invUsd(r.revenue)) : '<span class="wl-muted" title="Set the revenue on the Editors board">no amount</span>'}</b></td>
+            <td>${paid ? `<span class="status-pill status-done">Paid${b.paid_at ? ' ' + ie(invDate(String(b.paid_at).slice(0, 10))) : ''}</span>` : '<span class="status-pill status-revision">Unpaid</span>'}</td>
+            <td class="num"><button class="btn ${paid ? 'btn-ghost' : 'btn-secondary'} btn-sm" onclick="invSetPaid('${ie(r.id)}', ${!paid})">${paid ? 'Undo' : '✓ Paid'}</button></td></tr>`; }).join('')}
+          </tbody></table></div></div>` : ''}
+      </div>`; }).join('');
+    return `<div class="inv-card-title" style="font-size:18px;margin-bottom:10px">Client payments</div>
+      <div class="inv-stats" style="margin-bottom:12px">
+        <div class="inv-stat"><span>Unpaid · ${openCount} done project${openCount === 1 ? '' : 's'}</span><b style="color:var(--red)">${ie(invUsd(unpaid))}</b></div>
+        <div class="inv-stat"><span>Paid this month</span><b style="color:var(--ok)">${ie(invUsd(paidMonth))}</b></div>
+        <div class="inv-stat"><span>Paid · all time</span><b>${ie(invUsd(paidAll))}</b></div>
+      </div>
+      <div class="wl-help">When a project is marked <b>Done</b> on the Editors board, its revenue shows here as <b>unpaid</b>. When the client pays, click <b>✓ Paid</b>, or mark the invoice that includes it as paid. Amounts are in US dollars.</div>
+      <div class="pay-list">${rowsHtml || '<div class="wl-none">No finished projects yet.</div>'}</div>`;
+  }
+  function invToggleClient(gi) { const g = invPaymentGroups()[gi]; INV.openClient = (g && INV.openClient !== g.name) ? g.name : null; invRenderList(); }
+  async function invSetPaidMany(ids, paid, invoiceId) {
+    if (!ids.length) return true;
+    const now = new Date().toISOString();
+    const recs = ids.map(id => ({ project_id: id, paid, paid_at: paid ? now : null, invoice_id: paid ? (invoiceId || (INV.billing[id] || {}).invoice_id || null) : null, updated_at: now }));
+    const { error } = await db.from('project_billing').upsert(recs, { onConflict: 'project_id' });
+    if (error) { showToast('Could not save: ' + error.message); return false; }
+    recs.forEach(r => INV.billing[r.project_id] = r);
+    return true;
+  }
+  async function invSetPaid(id, paid) { if (await invSetPaidMany([id], paid)) { invRenderList(); showToast(paid ? 'Marked as paid' : 'Marked as unpaid'); } }
+  async function invMarkClientPaid(gi) {
+    const g = invPaymentGroups()[gi]; if (!g) return;
+    const ids = g.items.filter(r => !invIsPaid(r.id)).map(r => r.id);
+    showConfirm('Mark as paid?', `Mark ${ids.length} project${ids.length === 1 ? '' : 's'} from ${g.name === '—' ? 'projects without a client' : g.name} as paid (${invUsd(g.unpaid)})?`, 'Mark paid', async () => {
+      if (await invSetPaidMany(ids, true)) { invRenderList(); showToast('Marked as paid'); }
+    });
+  }
+
   function invRenderList() {
     INV.cur = null;
     const el = document.getElementById('invoicesContent');
     const rows = INV.list;
-    const sums = { unpaid: 0, overdue: 0, paid: 0 };
-    rows.forEach(r => { const s = invStatus(r).key; const t = invNum(r.total);
-      if (s === 'paid') sums.paid += t; else { sums.unpaid += t; if (s === 'overdue') sums.overdue += t; } });
     const cur = INV.profile.currency || 'USD';
-    let html = `<div class="inv-toolbar">
-        <div class="inv-stats">
-          <div class="inv-stat"><span>Waiting to be paid</span><b>${ie(invMoney(sums.unpaid, cur))}</b></div>
-          <div class="inv-stat"><span>Overdue</span><b style="color:var(--red)">${ie(invMoney(sums.overdue, cur))}</b></div>
-          <div class="inv-stat"><span>Paid</span><b style="color:var(--ok)">${ie(invMoney(sums.paid, cur))}</b></div>
-        </div>
+    let html = invPaymentsHtml() + `<div class="inv-toolbar" style="margin-top:26px">
+        <div class="inv-card-title" style="margin:0;font-size:18px">Invoices</div>
         <button class="btn btn-primary" onclick="invNew()">＋ New invoice</button>
       </div>`;
     if (!rows.length) {
@@ -7870,7 +7944,7 @@
             <div id="invItems">${invItemsHtml()}</div>
             <div class="inv-item-btns">
               <button class="btn btn-secondary btn-sm" onclick="invAddItem()">＋ Add line</button>
-              <button class="btn btn-secondary btn-sm" onclick="invAddProjects()" title="Adds this client's finished projects from the selected month">＋ Add finished projects</button>
+              <button class="btn btn-secondary btn-sm" onclick="invAddProjects()" title="Adds this client's Done projects that haven't been paid yet">＋ Add unpaid finished projects</button>
             </div>
             <div class="inv-grid2" style="margin-top:14px">
               ${invField('Discount (%)', 'discountPct', v.discountPct, { type:'number', step:'0.01' })}
@@ -7935,12 +8009,13 @@
     const v = INV.cur.v, name = (v.billTo.name || '').trim();
     if (!name) { showToast('Type the client name first'); return; }
     const pk = activePeriodKey();
-    const rows = (data.rows||[]).filter(r => (r.client||'').toLowerCase() === name.toLowerCase() && (r.period || currentPeriodKey()) === pk && r.status === 'Done');
-    if (!rows.length) { showToast(`No finished projects for ${name} in ${periodLabel()}`); return; }
+    const already = new Set(v.items.map(i => i.projectId).filter(Boolean));
+    const rows = (data.rows||[]).filter(r => (r.client||'').toLowerCase() === name.toLowerCase() && r.status === 'Done' && !invIsPaid(r.id) && !already.has(r.id));
+    if (!rows.length) { showToast(`No unpaid finished projects for ${name}`); return; }
     v.items = v.items.filter(it => (it.desc||'').trim() || invNum(it.rate));
-    rows.forEach(r => v.items.push({ desc: r.rawFile || 'Video edit', qty: 1, rate: r.revenueGross != null && r.revenueGross !== '' ? r.revenueGross : (r.revenue || '') }));
+    rows.forEach(r => v.items.push({ desc: r.rawFile || 'Video edit', qty: 1, rate: r.revenue || '', projectId: r.id }));
     document.getElementById('invItems').innerHTML = invItemsHtml(); invUpdatePreview();
-    showToast(`Added ${rows.length} finished project${rows.length===1?'':'s'} — check the prices`);
+    showToast(`Added ${rows.length} unpaid finished project${rows.length===1?'':'s'}. Check the prices.`);
   }
   function invLogo(input) {
     const f = input.files && input.files[0]; if (!f) return;
@@ -8005,7 +8080,13 @@
   }
   async function invTogglePaid() {
     INV.cur.status = INV.cur.status === 'paid' ? 'sent' : 'paid';
-    if (await invSave(true)) { showToast(INV.cur.status === 'paid' ? 'Marked as paid 🎉' : 'Marked as unpaid'); invRenderEditor(); }
+    if (!(await invSave(true))) return;
+    // projects added to this invoice follow its paid status
+    const ids = (INV.cur.v.items || []).map(i => i.projectId).filter(Boolean);
+    const linked = INV.cur.status === 'paid' ? ids : ids.filter(id => (INV.billing[id] || {}).invoice_id === INV.cur.id);
+    await invSetPaidMany(linked, INV.cur.status === 'paid', INV.cur.id);
+    showToast(INV.cur.status === 'paid' ? `Marked as paid 🎉${ids.length ? ` (${ids.length} project${ids.length === 1 ? '' : 's'} too)` : ''}` : 'Marked as unpaid');
+    invRenderEditor();
   }
   function invDelete() {
     showConfirm('Delete invoice?', `${INV.cur.v.number} will be deleted for good.`, 'Delete', async () => {
@@ -8123,17 +8204,17 @@
   // ===================== WORK LOG (admin only) =====================
   const WL = { loaded: false, rows: [], pay: {}, profile: null, period: null, mounted: false, role: 'designer', openRates: {} };
   const WL_ROLES = {
-    editor:       { label: 'Editors',        one: 'Editor',       unit: 'min',        units: 'Minutes edited', icon: '🎬', rateLabel: 'Pay per minute' },
-    designer:     { label: 'Designers',      one: 'Designer',     unit: 'thumbnail',  units: 'Thumbnails',     icon: '🖼️', rateLabel: 'Pay per thumbnail' },
-    scriptwriter: { label: 'Scriptwriters',  one: 'Scriptwriter', unit: 'script',     units: 'Scripts',        icon: '✍️', rateLabel: 'Pay per script' }
+    editor:       { label: 'Editors',        one: 'Editor',       unit: 'min',        units: 'Minutes edited', icon: '🎬', rateLabel: 'Pay per minute ($)' },
+    designer:     { label: 'Designers',      one: 'Designer',     unit: 'thumbnail',  units: 'Thumbnails',     icon: '🖼️', rateLabel: 'Pay per thumbnail ($)' },
+    scriptwriter: { label: 'Scriptwriters',  one: 'Scriptwriter', unit: 'script',     units: 'Scripts',        icon: '✍️', rateLabel: 'Pay per script ($)' }
   };
   const wlNum = v => { const n = parseFloat(String(v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
   const wlFmt = n => (Math.round(wlNum(n) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
-  function wlMoney(n) {
-    const c = (WL.profile && WL.profile.currency) || 'BDT';
-    const s = (Math.round(wlNum(n) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: c === 'BDT' ? 0 : 2, maximumFractionDigits: 2 });
-    return ({ USD: '$', BDT: '৳ ', EUR: '€', GBP: '£' }[c] || c + ' ') + s;
-  }
+  // Rates are entered in US dollars; people are paid in taka at the month's selling rate (shared with Finance)
+  function wlFx() { return monthRate(WL.period) || 0; }
+  const wlUsd = n => '$' + (Math.round(wlNum(n) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const wlBdt = n => '৳' + Math.round(wlNum(n) * wlFx()).toLocaleString('en-US');
+  function wlMoney(n) { return `${wlBdt(n)} (${wlUsd(n)})`; }
   function wlShift(pk, d) { let [y, m] = pk.split('-').map(Number); m += d; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, '0')}`; }
   function wlPeople(role) {
     const p = WL.profile.people || {};
@@ -8214,24 +8295,24 @@
             <button class="btn btn-secondary btn-sm" onclick="wlToggleRates(${ie(JSON.stringify(g.name))})">${open ? 'Hide rates' : '⚙ Rates'}</button></div>
         </div>
         ${open ? `<div class="wl-rates">
-          <label>Usual rate per minute for ${ie(g.name)}:
+          <label>Usual rate per minute for ${ie(g.name)} ($):
             <input type="number" min="0" step="any" value="${ie(wlSet(er.default) ? er.default : '')}" placeholder="${ie(wlFmt(wlNum(WL.profile.defaultRate.editor)))}" onchange="wlSetEdRate(${ie(JSON.stringify(g.name))}, null, this.value)"></label>
           <div class="wl-rates-sub">Special rates for a client (only for ${ie(g.name)}):</div>
           ${special.map(([cl, v]) => `<div class="wl-rate-line"><span class="client-pill">${ie(cl)}</span>
-            <input type="number" min="0" step="any" value="${ie(v)}" onchange="wlSetEdRate(${ie(JSON.stringify(g.name))}, ${ie(JSON.stringify(cl))}, this.value)"> per minute
+            <input type="number" min="0" step="any" value="${ie(v)}" onchange="wlSetEdRate(${ie(JSON.stringify(g.name))}, ${ie(JSON.stringify(cl))}, this.value)"> $ per minute
             <button class="inv-item-del" title="Remove" onclick="wlSetEdRate(${ie(JSON.stringify(g.name))}, ${ie(JSON.stringify(cl))}, '')">✕</button></div>`).join('') || '<div class="wl-muted" style="font-size:13px">None yet.</div>'}
           <div class="wl-rate-line"><select id="wlNewCl_${gi}"><option value="">Choose client…</option>${clients.map(n => `<option>${ie(n)}</option>`).join('')}</select>
-            <input type="number" min="0" step="any" id="wlNewRate_${gi}" placeholder="rate"> per minute
+            <input type="number" min="0" step="any" id="wlNewRate_${gi}" placeholder="rate"> $ per minute
             <button class="btn btn-secondary btn-sm" onclick="wlAddClientRate(${gi}, ${ie(JSON.stringify(g.name))})">Add</button></div>
         </div>` : ''}
         <div class="table-scroll"><table class="wl-table">
-          <thead><tr><th>Project</th><th>Client</th><th>Status</th><th class="num">Minutes</th><th class="num">Rate / min</th><th class="num">Extra</th><th class="num">Pay</th></tr></thead>
+          <thead><tr><th>Project</th><th>Client</th><th>Status</th><th class="num">Minutes</th><th class="num">Rate / min ($)</th><th class="num">Extra ($)</th><th class="num">Pay</th></tr></thead>
           <tbody>${rows}</tbody></table></div>
       </div>`;
     }).join('');
     return `<div class="inv-card wl-editors">
       <div class="wl-card-head"><div class="inv-card-title" style="margin:0">🎬 Editors · paid per project</div>
-        <label class="wl-default">Default rate per minute (all editors): <input type="number" min="0" step="any" value="${ie(WL.profile.defaultRate.editor ?? '')}" placeholder="0" onchange="wlSetDefault('editor', this.value)"></label></div>
+        <label class="wl-default">Default rate per minute, all editors ($): <input type="number" min="0" step="any" value="${ie(WL.profile.defaultRate.editor ?? '')}" placeholder="0" onchange="wlSetDefault('editor', this.value)"></label></div>
       <div class="wl-help">Projects assigned on the <b>Editors</b> board this month show up here automatically. Type the <b>minutes</b>. The rate comes from the editor's usual rate, or their special rate for that client (set under <b>⚙ Rates</b>). To pay one project differently, type a rate in its box. Use <b>Extra</b> for advanced projects.</div>
       ${blocks || `<div class="wl-none">No projects assigned to editors in this month yet. Assign them on the Editors board and set the client there.</div>`}
     </div>`;
@@ -8257,7 +8338,7 @@
   function wlUpdateTiles() {
     const t = wlTotals(WL.period);
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('wlTileMin', wlFmt(t.edMin)); set('wlTilePay', wlMoney(t.pay));
+    set('wlTileMin', wlFmt(t.edMin)); set('wlTilePay', wlBdt(t.pay)); set('wlTilePayUsd', wlUsd(t.pay));
   }
   function wlPayInput(el) {
     const pid = el.dataset.pid; WL.pay[pid] = Object.assign({ project_id: pid }, WL.pay[pid] || {});
@@ -8319,11 +8400,14 @@
         <div style="flex:1"></div>
         <button class="btn btn-secondary btn-sm" onclick="wlCsv()">⬇ Download month (Excel)</button>
       </div>
+      <div class="wl-fx">💱 Rates are in <b>US dollars</b>; pay is shown in <b>taka</b> at this month's rate:
+        <b>1 USD =</b> <input type="number" min="0" step="any" value="${ie(wlFx())}" onchange="wlSetFx(this.value)" aria-label="Taka per US dollar"> <b>৳</b>
+        <span class="wl-muted">(the same Selling rate as on the Finance page)</span></div>
       <div class="inv-stats wl-stats">
         <div class="inv-stat"><span>🎬 Minutes edited</span><b id="wlTileMin">${wlFmt(T.edMin)}</b></div>
         <div class="inv-stat"><span>🖼️ Thumbnails</span><b>${wlFmt(sum('designer'))}</b></div>
         <div class="inv-stat"><span>✍️ Scripts</span><b>${wlFmt(sum('scriptwriter'))}</b></div>
-        <div class="inv-stat"><span>💰 Total to pay</span><b id="wlTilePay" style="color:var(--accent)">${ie(wlMoney(T.pay))}</b></div>
+        <div class="inv-stat"><span>💰 Total to pay</span><b id="wlTilePay" style="color:var(--accent)">${ie(wlBdt(T.pay))}</b><small id="wlTilePayUsd" class="wl-muted">${ie(wlUsd(T.pay))}</small></div>
       </div>
       ${wlEditorSectionHtml(pk)}
 
@@ -8358,8 +8442,7 @@
           <tfoot><tr><td>Total</td><td class="num">${wlFmt(t)}</td><td></td><td class="num">${ie(wlMoney(rolePay))}</td><td></td></tr></tfoot></table></div>
         </div>`; }).join('')}
       </div>
-      <div class="wl-hint">Leave a person's pay box empty to use the default for their role. Currency:
-        <select onchange="wlSetCurrency(this.value)">${['BDT', 'USD', 'EUR', 'GBP'].map(c => `<option ${c === WL.profile.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+      <div class="wl-hint">Leave a person's pay box empty to use the default for their role. All rates are in US dollars.</div>
 
       <div class="inv-card">
         <div class="inv-card-title">All entries this month <span class="inv-hint">${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}</span></div>
@@ -8416,7 +8499,11 @@
   }
   async function wlSetRate(role, name, v) { WL.profile.rates[role] = WL.profile.rates[role] || {}; if (v === '') delete WL.profile.rates[role][name]; else WL.profile.rates[role][name] = wlNum(v); await wlSaveProfile(); wlRender(); }
   async function wlSetDefault(role, v) { WL.profile.defaultRate[role] = v === '' ? '' : wlNum(v); await wlSaveProfile(); wlRender(); }
-  async function wlSetCurrency(c) { WL.profile.currency = c; await wlSaveProfile(); wlRender(); }
+  async function wlSetFx(v) {
+    const n = wlNum(v); if (!(n > 0)) { showToast('Enter how many taka one dollar is'); wlRender(); return; }
+    if (!data.monthRates) data.monthRates = {};
+    data.monthRates[WL.period] = n; wlRender(); await saveData(); showToast(`Rate saved: 1 USD = ৳${n}`);
+  }
   async function wlHide(role, name) {
     WL.profile.hidden = WL.profile.hidden || {}; WL.profile.hidden[role] = [...new Set([...(WL.profile.hidden[role] || []), name])];
     WL.profile.people[role] = (WL.profile.people[role] || []).filter(x => x !== name);
@@ -8425,17 +8512,18 @@
   function wlCsv() {
     const pk = WL.period, rows = WL.rows.filter(r => r.period === pk);
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const lines = [['Summary for ' + periodKeyToLabel(pk)], [], ['Role', 'Name', 'Amount', 'Unit', 'Pay rate', 'Pay (' + WL.profile.currency + ')']];
+    const fx = wlFx(), usd = n => Math.round(n * 100) / 100, bdt = n => Math.round(n * fx);
+    const lines = [['Summary for ' + periodKeyToLabel(pk)], ['Exchange rate: 1 USD = ' + fx + ' BDT'], [], ['Role', 'Name', 'Amount', 'Unit', 'Rate (USD)', 'Pay (USD)', 'Pay (BDT)']];
     Object.entries(WL_ROLES).forEach(([role, R]) => {
       const t = {}; rows.filter(r => r.role === role).forEach(r => t[r.person] = (t[r.person] || 0) + wlNum(r.qty));
-      Object.entries(t).sort().forEach(([n, v]) => lines.push([R.one, n, v, R.unit, wlRate(role, n), Math.round(v * wlRate(role, n) * 100) / 100]));
+      Object.entries(t).sort().forEach(([n, v]) => lines.push([R.one, n, v, R.unit, wlRate(role, n), usd(v * wlRate(role, n)), bdt(v * wlRate(role, n))]));
     });
     const groups = wlEditorGroups(pk);
     if (groups.length) {
-      lines.push([], ['Editors — per project'], ['Editor', 'Project', 'Client', 'Status', 'Minutes', 'Rate per minute', 'Extra', 'Pay (' + WL.profile.currency + ')']);
+      lines.push([], ['Editors — per project'], ['Editor', 'Project', 'Client', 'Status', 'Minutes', 'Rate per minute (USD)', 'Extra (USD)', 'Pay (USD)', 'Pay (BDT)']);
       groups.forEach(g => {
-        g.items.forEach(({ r, c }) => lines.push([g.name, r.rawFile || '', r.client || '', r.status || '', c.minutes, c.rate, c.extra, Math.round(c.total * 100) / 100]));
-        lines.push([g.name + ' total', '', '', '', g.minutes, '', '', Math.round(g.pay * 100) / 100]);
+        g.items.forEach(({ r, c }) => lines.push([g.name, r.rawFile || '', r.client || '', r.status || '', c.minutes, c.rate, c.extra, usd(c.total), bdt(c.total)]));
+        lines.push([g.name + ' total', '', '', '', g.minutes, '', '', usd(g.pay), bdt(g.pay)]);
       });
     }
     lines.push([], ['Thumbnails & scripts — all entries'], ['Date', 'Name', 'Role', 'Amount', 'Unit', 'Client', 'Note']);
