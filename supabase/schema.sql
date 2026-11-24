@@ -50,6 +50,13 @@ create table if not exists leads (
 create table if not exists project_bin (id text primary key, project_data jsonb, deleted_at text, deleted_by text);
 create table if not exists expense_bin (id text primary key, expense_data jsonb, period text, deleted_at text);
 create table if not exists roster_history (period text primary key, teams jsonb, individuals jsonb, snapshot_at text);
+create table if not exists invoices (
+  id text primary key, number text, client text, client_email text, status text default 'draft',
+  currency text, total numeric, issue_date text, due_date text, data jsonb,
+  created_at timestamptz default now(), updated_at timestamptz default now()
+);
+-- Your business details, payment info and saved client emails for invoices (admin only)
+alter table settings add column if not exists invoice_profile jsonb;
 
 -- Private tables (no API access at all)
 create table if not exists crm_secrets (key text primary key, value text not null);
@@ -181,14 +188,14 @@ do $$
 declare t text;
 begin
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history',
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices',
     'crm_secrets','crm_sessions','crm_login_attempts'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists admin_all on %I', t);
   end loop;
   -- Admin can do everything on the app tables
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
-    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history'] loop
+    'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices'] loop
     execute format($p$create policy admin_all on %I for all to authenticated
       using (crm_role() = 'admin') with check (crm_role() = 'admin')$p$, t);
   end loop;
@@ -241,7 +248,7 @@ end $$;
 -- Table permissions (the rules above then decide which rows each person gets)
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on settings, period_settings, columns, projects, teams, individuals,
-  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history to authenticated;
+  editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices to authenticated;
 revoke all on crm_secrets, crm_sessions, crm_login_attempts from authenticated, anon;
 -- Logged-out visitors get nothing
 revoke all on all tables in schema public from anon;

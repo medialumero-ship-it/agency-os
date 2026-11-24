@@ -1096,6 +1096,74 @@
   .btn-tb:hover { background: var(--accent-soft); }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: #dccbb8; border-radius: 10px; border: 2px solid var(--bg); }
+  /* ===== Invoices ===== */
+  .inv-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .inv-stats { display:flex; gap:12px; flex-wrap:wrap; }
+  .inv-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 18px; min-width:150px; box-shadow:var(--shadow-sm); }
+  .inv-stat span { display:block; font-size:12.5px; color:var(--text-muted); margin-bottom:4px; }
+  .inv-stat b { font-size:20px; color:var(--text); }
+  .inv-empty { text-align:center; padding:60px 20px; background:var(--surface); border:1px dashed var(--border-bright); border-radius:var(--radius-lg); color:var(--text-dim); font-size:14px; line-height:1.6; }
+  .inv-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .inv-row { display:grid; grid-template-columns: 1.6fr 1fr 1fr 1fr auto; gap:14px; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  .inv-row:last-child { border-bottom:0; }
+  .inv-row:hover { background:#fdf8f3; }
+  .inv-row-num { font-weight:700; color:var(--text); font-size:15px; }
+  .inv-row-client { color:var(--text-dim); font-size:13.5px; margin-top:2px; }
+  .inv-row-date { font-size:13.5px; color:var(--text); }
+  .inv-row-date span { display:block; font-size:12px; color:var(--text-muted); }
+  .inv-row-total { font-weight:700; font-size:16px; color:var(--text); text-align:right; }
+  .inv-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 0; }
+  .inv-layout { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr); gap:22px; align-items:start; }
+  .inv-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+  .inv-card-title { font-weight:700; font-size:15px; color:var(--text); margin-bottom:12px; }
+  .inv-hint { font-weight:500; font-size:12px; color:var(--text-muted); margin-left:6px; }
+  .inv-field { display:block; margin-bottom:12px; }
+  .inv-field span { display:block; font-size:13px; font-weight:600; color:var(--text-dim); margin-bottom:5px; }
+  .inv-field input, .inv-field select, .inv-field textarea, .inv-item input { width:100%; padding:10px 12px; border:1px solid var(--border-bright); border-radius:var(--radius-sm); background:#fff; font-family:inherit; font-size:14px; color:var(--text); }
+  .inv-field textarea { resize:vertical; line-height:1.5; }
+  .inv-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  .inv-items-head, .inv-item { display:grid; grid-template-columns: minmax(0,1fr) 64px 96px 96px 30px; gap:8px; align-items:center; }
+  .inv-items-head { font-size:12.5px; font-weight:600; color:var(--text-muted); margin-bottom:6px; }
+  .inv-items-head span:nth-child(4) { text-align:right; }
+  .inv-item { margin-bottom:8px; }
+  .inv-item-amt { text-align:right; font-weight:600; font-size:13.5px; color:var(--text); }
+  .inv-item-del { border:0; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; border-radius:6px; height:30px; }
+  .inv-item-del:hover { background:#fce9e6; color:var(--red); }
+  .inv-item-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .inv-logo-row { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .inv-logo-box { width:120px; height:56px; border:1px dashed var(--border-bright); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff; color:var(--text-muted); font-size:12px; }
+  .inv-logo-box img { max-width:100%; max-height:100%; }
+  .inv-preview-wrap { position:sticky; top:70px; }
+  .inv-preview-label { font-size:13px; color:var(--text-muted); margin-bottom:8px; }
+  .inv-paper { background:#fff; border:1px solid var(--border); border-top:5px solid var(--accent); border-radius:6px; padding:34px 36px; box-shadow:var(--shadow-md); color:#2a1f18; font-size:13px; line-height:1.55; }
+  .ip-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:26px; gap:16px; }
+  .ip-logo { max-height:52px; max-width:180px; }
+  .ip-biz { font-weight:800; font-size:18px; }
+  .ip-title { text-align:right; } .ip-title div { font-size:26px; font-weight:800; color:var(--accent); letter-spacing:1px; } .ip-title span { color:#8c7d71; }
+  .ip-parties { display:grid; grid-template-columns:1fr 1fr auto; gap:18px; margin-bottom:22px; }
+  .ip-lbl { font-size:11px; font-weight:700; color:#8c7d71; letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
+  .ip-dates div { margin-bottom:8px; } .ip-dates span { display:block; font-size:11px; font-weight:700; color:#8c7d71; text-transform:uppercase; letter-spacing:.06em; }
+  .ip-table { width:100%; border-collapse:collapse; margin-bottom:12px; }
+  .ip-table th { background:#fbeee5; color:var(--accent); text-align:left; font-size:12px; padding:8px 10px; }
+  .ip-table td { padding:9px 10px; border-bottom:1px solid #efe6db; vertical-align:top; }
+  .ip-table th:not(:first-child), .ip-table td:not(:first-child) { text-align:right; white-space:nowrap; }
+  table.ip-table tbody tr:hover td { background:transparent; }
+  .ip-totals { margin-left:auto; width:min(270px,100%); }
+  .ip-totals div { display:flex; justify-content:space-between; padding:4px 0; } .ip-totals span { color:#8c7d71; }
+  .ip-grand { border-top:2px solid var(--accent); margin-top:6px; padding-top:8px !important; font-weight:800; font-size:16px; } .ip-grand span { color:#2a1f18 !important; }
+  .ip-block { margin-top:20px; }
+  @media (max-width: 900px) {
+    .inv-layout { grid-template-columns: 1fr; }
+    .inv-preview-wrap { position:static; }
+    .inv-row { grid-template-columns: 1fr auto; } .inv-row-date { display:none; }
+    .inv-paper { padding:22px 18px; } .ip-parties { grid-template-columns:1fr 1fr; } .ip-dates { grid-column: 1 / -1; display:flex; gap:24px; }
+  }
+  @media (max-width: 520px) {
+    .inv-grid2 { grid-template-columns:1fr; }
+    .inv-items-head { display:none; }
+    .inv-item { grid-template-columns: 1fr 1fr 30px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); }
+    .inv-item input:first-child { grid-column: 1 / -1; } .inv-item-amt { grid-column: 1 / 3; text-align:left; }
+  }
 </style>
 </head>
 <body>
@@ -1145,6 +1213,7 @@
     <div class="nav-tab" data-page="leaderboard" onclick="switchPage('leaderboard')">Leaderboard</div>
     <div class="nav-tab" data-page="finance" onclick="switchPage('finance')" id="financeTab">Finance</div>
     <div class="nav-tab" data-page="leads" onclick="switchPage('leads')" id="leadsTab" style="display:none">Leads</div>
+    <div class="nav-tab" data-page="invoices" onclick="switchPage('invoices')" id="invoicesTab" style="display:none">Invoices</div>
   </div>
 
   <div class="page active" id="page-crm">
@@ -1222,6 +1291,12 @@
     <div id="financeContent"></div>
   </div>
 
+  <div class="page" id="page-invoices">
+    <div class="section-header">
+      <div><div class="section-title">Invoices</div><div class="section-sub">Create an invoice, download it as a PDF, or email it to your client</div></div>
+    </div>
+    <div id="invoicesContent"></div>
+  </div>
   <div class="page" id="page-leads">
     <!-- Priority Clients section -->
     <div class="pc-section">
@@ -2528,6 +2603,7 @@
       if (lbTab) lbTab.style.display = showFull ? 'flex' : 'none';
       document.getElementById('clientsTab').style.display = showFull ? 'flex' : 'none';
       if (leadsTab) leadsTab.style.display = (showFull) ? 'flex' : (leadsOnlyMode() ? 'flex' : 'none');
+      const invTab = document.getElementById('invoicesTab'); if (invTab) invTab.style.display = showFull ? 'flex' : 'none';
 
       document.getElementById('addColBtn').style.display = showFull ? 'inline-block' : 'none';
       if (arb) arb.style.display = 'none';
@@ -2571,7 +2647,7 @@
     let startPage = 'crm';
     try { startPage = localStorage.getItem('agency_os_page') || 'crm'; } catch(e) {}
     const allowed = {
-      admin: ['crm','clients','leaderboard','finance','leads'],
+      admin: ['crm','clients','leaderboard','finance','leads','invoices'],
       editor: ['crm','leaderboard'],
       client: ['crm']
     };
@@ -2590,6 +2666,7 @@
     if (page === 'finance' && leadsOnlyMode()) return;
     if (page === 'clients' && !isAdmin()) return;
     if (page === 'leads' && !isAdmin()) return;
+    if (page === 'invoices' && (!isAdmin() || foodOnlyMode() || leadsOnlyMode())) return;
     if (page === 'leaderboard' && isClient()) return;
     currentPage = page;
     try { localStorage.setItem('agency_os_page', page); } catch(e) {}
@@ -2709,6 +2786,7 @@
     if (currentPage === 'finance') renderFinance();
     if (currentPage === 'clients') renderClientsCRM();
     if (currentPage === 'leads') { renderPriorityClients(); renderLeads(); }
+    if (currentPage === 'invoices') renderInvoices();
     populateEditorFilter();
   }
 
@@ -7516,6 +7594,419 @@
       if (purged || purgedExp || _needSplitSave) { await saveData(); _needSplitSave = false; }
     }
     return true;
+  }
+
+  // ===================== INVOICES (admin only) =====================
+  const INV = { loaded: false, list: [], profile: null, cur: null, mounted: false };
+  const INV_CURRENCIES = ['USD','EUR','GBP','CAD','AUD','BDT','INR','AED'];
+  const ie = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const invToday = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  const invAddDays = (iso, n) => { const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  const invNum = v => { const n = parseFloat(String(v).replace(/,/g,'')); return isFinite(n) ? n : 0; };
+  function invMoney(n, cur, forPdf) {
+    const sym = { USD:'$', GBP:'£', EUR: forPdf ? 'EUR ' : '€', CAD:'CA$', AUD:'A$' }[cur];
+    const s = (Math.round(invNum(n)*100)/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (n < 0 ? '-' : '') + (sym || (cur + ' ')) + s.replace('-', '');
+  }
+  function invDate(iso) { if (!iso) return '—'; const d = new Date(iso+'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+  function invTotals(v) {
+    const sub = (v.items||[]).reduce((s,i) => s + invNum(i.qty)*invNum(i.rate), 0);
+    const disc = sub * invNum(v.discountPct)/100;
+    const tax = (sub - disc) * invNum(v.taxPct)/100;
+    return { sub, disc, tax, total: sub - disc + tax };
+  }
+  function invStatus(row) {
+    if (row.status === 'paid') return { key:'paid', label:'Paid', cls:'status-done' };
+    if (row.due_date && row.due_date < invToday()) return { key:'overdue', label:'Overdue', cls:'status-revision' };
+    if (row.status === 'sent') return { key:'sent', label:'Sent', cls:'status-review' };
+    return { key:'draft', label:'Draft', cls:'status-assigned' };
+  }
+
+  async function invLoad() {
+    const [l, p] = await Promise.all([
+      db.from('invoices').select('*').order('created_at', { ascending: false }),
+      db.from('settings').select('invoice_profile').eq('id', 'main').maybeSingle()
+    ]);
+    if (l.error || p.error) { showError('Could not load invoices: ' + ((l.error||p.error).message)); return false; }
+    INV.list = l.data || [];
+    INV.profile = Object.assign({ business:{ name:'', email:'', phone:'', address:'', logo:'' }, payment:'', notes:'Thank you for your business!', currency:'USD', taxPct:0, dueDays:14, clients:{} }, (p.data && p.data.invoice_profile) || {});
+    INV.loaded = true; return true;
+  }
+  async function invSaveProfile() {
+    const { error } = await db.from('settings').update({ invoice_profile: INV.profile, updated_at: new Date().toISOString() }).eq('id', 'main');
+    if (error) showToast('Could not save your details: ' + error.message);
+  }
+
+  async function renderInvoices() {
+    if (!isAdmin()) return;
+    if (INV.mounted) return;            // don't wipe the form while someone is typing
+    INV.mounted = true;
+    const el = document.getElementById('invoicesContent');
+    el.innerHTML = '<div class="inv-empty">Loading invoices…</div>';
+    if (!INV.loaded && !(await invLoad())) { INV.mounted = false; return; }
+    INV.cur ? invRenderEditor() : invRenderList();
+  }
+
+  function invRenderList() {
+    INV.cur = null;
+    const el = document.getElementById('invoicesContent');
+    const rows = INV.list;
+    const sums = { unpaid: 0, overdue: 0, paid: 0 };
+    rows.forEach(r => { const s = invStatus(r).key; const t = invNum(r.total);
+      if (s === 'paid') sums.paid += t; else { sums.unpaid += t; if (s === 'overdue') sums.overdue += t; } });
+    const cur = INV.profile.currency || 'USD';
+    let html = `<div class="inv-toolbar">
+        <div class="inv-stats">
+          <div class="inv-stat"><span>Waiting to be paid</span><b>${ie(invMoney(sums.unpaid, cur))}</b></div>
+          <div class="inv-stat"><span>Overdue</span><b style="color:var(--red)">${ie(invMoney(sums.overdue, cur))}</b></div>
+          <div class="inv-stat"><span>Paid</span><b style="color:var(--ok)">${ie(invMoney(sums.paid, cur))}</b></div>
+        </div>
+        <button class="btn btn-primary" onclick="invNew()">＋ New invoice</button>
+      </div>`;
+    if (!rows.length) {
+      html += `<div class="inv-empty"><div style="font-size:40px;margin-bottom:8px">🧾</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">No invoices yet</div>
+        <div>Click <b>＋ New invoice</b> to create your first one. You can download it as a PDF or email it to your client.</div></div>`;
+    } else {
+      html += `<div class="inv-list">` + rows.map(r => { const s = invStatus(r); return `
+        <div class="inv-row" onclick="invOpen('${ie(r.id)}')">
+          <div class="inv-row-main"><div class="inv-row-num">${ie(r.number)}</div><div class="inv-row-client">${ie(r.client || 'No client')}</div></div>
+          <div class="inv-row-date"><span>Issued</span>${ie(invDate(r.issue_date))}</div>
+          <div class="inv-row-date"><span>Due</span>${ie(invDate(r.due_date))}</div>
+          <div class="inv-row-total">${ie(invMoney(r.total, r.currency || cur))}</div>
+          <div><span class="status-pill ${s.cls}">${s.label}</span></div>
+        </div>`; }).join('') + `</div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function invNextNumber() {
+    let max = 0;
+    INV.list.forEach(r => { const m = String(r.number||'').match(/(\d+)\s*$/); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+    return 'INV-' + String(max + 1).padStart(4, '0');
+  }
+  function invNew() {
+    const p = INV.profile, today = invToday();
+    INV.cur = { id: null, status: 'draft', v: {
+      number: invNextNumber(), issueDate: today, dueDate: invAddDays(today, invNum(p.dueDays) || 14), currency: p.currency || 'USD',
+      from: JSON.parse(JSON.stringify(p.business)), billTo: { name:'', email:'', address:'' },
+      items: [{ desc:'', qty:1, rate:'' }], discountPct: 0, taxPct: p.taxPct || 0, notes: p.notes || '', payment: p.payment || ''
+    }};
+    invRenderEditor();
+  }
+  function invOpen(id) {
+    const r = INV.list.find(x => x.id === id); if (!r) return;
+    INV.cur = { id: r.id, status: r.status || 'draft', v: JSON.parse(JSON.stringify(r.data || {})) };
+    INV.cur.v.from = Object.assign({ name:'', email:'', phone:'', address:'', logo:'' }, INV.cur.v.from || {});
+    INV.cur.v.billTo = Object.assign({ name:'', email:'', address:'' }, INV.cur.v.billTo || {});
+    if (!INV.cur.v.items || !INV.cur.v.items.length) INV.cur.v.items = [{ desc:'', qty:1, rate:'' }];
+    invRenderEditor();
+  }
+  function invBack() { INV.cur = null; invRenderList(); window.scrollTo(0, 0); }
+
+  function invClientNames() {
+    const set = new Set();
+    (data.clientAccounts||[]).forEach(c => c.name && set.add(c.name));
+    (data.rows||[]).forEach(r => r.client && set.add(r.client));
+    Object.keys(INV.profile.clients||{}).forEach(n => set.add(n));
+    return [...set].sort((a,b) => a.localeCompare(b));
+  }
+
+  function invField(label, key, val, opts) {
+    opts = opts || {};
+    const attrs = `data-k="${key}" oninput="invInput(this)" ${opts.ph ? `placeholder="${ie(opts.ph)}"` : ''} ${opts.list ? `list="${opts.list}"` : ''}`;
+    const input = opts.area ? `<textarea rows="${opts.rows||3}" ${attrs}>${ie(val)}</textarea>`
+      : `<input type="${opts.type||'text'}" ${opts.step ? `step="${opts.step}" min="0"` : ''} value="${ie(val)}" ${attrs}>`;
+    return `<label class="inv-field ${opts.cls||''}"><span>${label}</span>${input}</label>`;
+  }
+
+  function invRenderEditor() {
+    const el = document.getElementById('invoicesContent');
+    const c = INV.cur, v = c.v;
+    const s = c.id ? invStatus({ status: c.status, due_date: v.dueDate }) : { label:'New', cls:'status-assigned', key:'draft' };
+    const curOpts = INV_CURRENCIES.map(x => `<option ${x===v.currency?'selected':''}>${x}</option>`).join('');
+    el.innerHTML = `
+      <div class="inv-actions">
+        <button class="btn btn-ghost" onclick="invBack()">← All invoices</button>
+        <span class="status-pill ${s.cls}">${s.label}</span>
+        <div style="flex:1"></div>
+        ${c.id ? `<button class="btn btn-secondary" onclick="invTogglePaid()">${c.status==='paid' ? 'Mark as unpaid' : '✓ Mark as paid'}</button>` : ''}
+        <button class="btn btn-secondary" onclick="invSave()">Save</button>
+        <button class="btn btn-secondary" onclick="invDownload()">⬇ Download PDF</button>
+        <button class="btn btn-primary" onclick="invEmail()">✉ Email to client</button>
+      </div>
+      <div class="inv-layout">
+        <div class="inv-form">
+          <div class="inv-card">
+            <div class="inv-card-title">1. Bill to</div>
+            <datalist id="invClientList">${invClientNames().map(n => `<option value="${ie(n)}">`).join('')}</datalist>
+            ${invField('Client name', 'billTo.name', v.billTo.name, { list:'invClientList', ph:'Start typing a client name' })}
+            ${invField('Client email', 'billTo.email', v.billTo.email, { type:'email', ph:'client@company.com' })}
+            ${invField('Client address (optional)', 'billTo.address', v.billTo.address, { area:true, rows:2 })}
+          </div>
+          <div class="inv-card">
+            <div class="inv-card-title">2. Invoice details</div>
+            <div class="inv-grid2">
+              ${invField('Invoice number', 'number', v.number)}
+              <label class="inv-field"><span>Currency</span><select data-k="currency" onchange="invInput(this)">${curOpts}</select></label>
+              ${invField('Issue date', 'issueDate', v.issueDate, { type:'date' })}
+              ${invField('Due date', 'dueDate', v.dueDate, { type:'date' })}
+            </div>
+          </div>
+          <div class="inv-card">
+            <div class="inv-card-title">3. What you're charging for</div>
+            <div class="inv-items-head"><span>Description</span><span>Qty</span><span>Price</span><span>Amount</span><span></span></div>
+            <div id="invItems">${invItemsHtml()}</div>
+            <div class="inv-item-btns">
+              <button class="btn btn-secondary btn-sm" onclick="invAddItem()">＋ Add line</button>
+              <button class="btn btn-secondary btn-sm" onclick="invAddProjects()" title="Adds this client's finished projects from the selected month">＋ Add finished projects</button>
+            </div>
+            <div class="inv-grid2" style="margin-top:14px">
+              ${invField('Discount (%)', 'discountPct', v.discountPct, { type:'number', step:'0.01' })}
+              ${invField('Tax / VAT (%)', 'taxPct', v.taxPct, { type:'number', step:'0.01' })}
+            </div>
+          </div>
+          <div class="inv-card">
+            <div class="inv-card-title">4. Notes &amp; how to pay you</div>
+            ${invField('Payment details (bank, Wise, PayPal…)', 'payment', v.payment, { area:true, rows:4, ph:'e.g. Bank: …  Account name: …  Account no: …  SWIFT: …' })}
+            ${invField('Note to client', 'notes', v.notes, { area:true, rows:2 })}
+          </div>
+          <div class="inv-card">
+            <div class="inv-card-title">5. Your business <span class="inv-hint">saved for next time</span></div>
+            <div class="inv-logo-row">
+              <div class="inv-logo-box">${v.from.logo ? `<img src="${ie(v.from.logo)}" alt="Logo">` : '<span>No logo</span>'}</div>
+              <div><label class="btn btn-secondary btn-sm" style="display:inline-block">Upload logo<input type="file" accept="image/png,image/jpeg" style="display:none" onchange="invLogo(this)"></label>
+                ${v.from.logo ? `<button class="btn btn-ghost btn-sm" onclick="invSetLogo('')">Remove</button>` : ''}</div>
+            </div>
+            ${invField('Business name', 'from.name', v.from.name, { ph:'Your agency name' })}
+            <div class="inv-grid2">
+              ${invField('Email', 'from.email', v.from.email, { type:'email' })}
+              ${invField('Phone', 'from.phone', v.from.phone)}
+            </div>
+            ${invField('Address', 'from.address', v.from.address, { area:true, rows:2 })}
+          </div>
+          ${c.id ? `<button class="btn btn-ghost" style="color:var(--red);margin-top:4px" onclick="invDelete()">Delete this invoice</button>` : ''}
+        </div>
+        <div class="inv-preview-wrap"><div class="inv-preview-label">Preview — this is what your client sees</div><div id="invPreview" class="inv-paper"></div></div>
+      </div>`;
+    invUpdatePreview();
+  }
+
+  function invItemsHtml() {
+    const v = INV.cur.v;
+    return v.items.map((it, i) => `
+      <div class="inv-item">
+        <input data-k="items.${i}.desc" oninput="invInput(this)" value="${ie(it.desc)}" placeholder="e.g. Instagram reel edit">
+        <input data-k="items.${i}.qty" oninput="invInput(this)" type="number" min="0" step="any" value="${ie(it.qty)}" placeholder="Qty" title="Quantity">
+        <input data-k="items.${i}.rate" oninput="invInput(this)" type="number" min="0" step="any" value="${ie(it.rate)}" placeholder="Price" title="Price per item">
+        <div class="inv-item-amt" id="invAmt${i}">${ie(invMoney(invNum(it.qty)*invNum(it.rate), v.currency))}</div>
+        <button class="inv-item-del" title="Remove line" onclick="invDelItem(${i})">✕</button>
+      </div>`).join('');
+  }
+  function invInput(elm) {
+    const path = elm.dataset.k.split('.'); let o = INV.cur.v;
+    for (let i = 0; i < path.length - 1; i++) o = o[path[i]];
+    o[path[path.length-1]] = elm.value;
+    if (elm.dataset.k === 'billTo.name') {           // fill in a known client's saved email/address
+      const saved = (INV.profile.clients||{})[elm.value];
+      if (saved) {
+        if (!INV.cur.v.billTo.email && saved.email) { INV.cur.v.billTo.email = saved.email; const e = document.querySelector('[data-k="billTo.email"]'); if (e) e.value = saved.email; }
+        if (!INV.cur.v.billTo.address && saved.address) { INV.cur.v.billTo.address = saved.address; const a = document.querySelector('[data-k="billTo.address"]'); if (a) a.value = saved.address; }
+      }
+    }
+    const v = INV.cur.v;
+    if (path[0] === 'items' || path[0] === 'currency') v.items.forEach((it, i) => { const a = document.getElementById('invAmt'+i); if (a) a.textContent = invMoney(invNum(it.qty)*invNum(it.rate), v.currency); });
+    invUpdatePreview();
+  }
+  function invAddItem() { INV.cur.v.items.push({ desc:'', qty:1, rate:'' }); document.getElementById('invItems').innerHTML = invItemsHtml(); invUpdatePreview(); }
+  function invDelItem(i) { const it = INV.cur.v.items; it.splice(i, 1); if (!it.length) it.push({ desc:'', qty:1, rate:'' }); document.getElementById('invItems').innerHTML = invItemsHtml(); invUpdatePreview(); }
+  function invAddProjects() {
+    const v = INV.cur.v, name = (v.billTo.name || '').trim();
+    if (!name) { showToast('Type the client name first'); return; }
+    const pk = activePeriodKey();
+    const rows = (data.rows||[]).filter(r => (r.client||'').toLowerCase() === name.toLowerCase() && (r.period || currentPeriodKey()) === pk && r.status === 'Done');
+    if (!rows.length) { showToast(`No finished projects for ${name} in ${periodLabel()}`); return; }
+    v.items = v.items.filter(it => (it.desc||'').trim() || invNum(it.rate));
+    rows.forEach(r => v.items.push({ desc: r.rawFile || 'Video edit', qty: 1, rate: r.revenueGross != null && r.revenueGross !== '' ? r.revenueGross : (r.revenue || '') }));
+    document.getElementById('invItems').innerHTML = invItemsHtml(); invUpdatePreview();
+    showToast(`Added ${rows.length} finished project${rows.length===1?'':'s'} — check the prices`);
+  }
+  function invLogo(input) {
+    const f = input.files && input.files[0]; if (!f) return;
+    if (f.size > 5*1024*1024) { showToast('That image is too big (max 5 MB)'); return; }
+    const img = new Image(), rd = new FileReader();
+    rd.onload = () => { img.onload = () => {
+      const scale = Math.min(1, 360 / img.width, 160 / img.height);
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      invSetLogo(cv.toDataURL('image/jpeg', 0.9));
+    }; img.src = rd.result; };
+    rd.readAsDataURL(f);
+  }
+  function invSetLogo(url) { INV.cur.v.from.logo = url; invRenderEditor(); }
+
+  function invPaperHtml(v) {
+    const t = invTotals(v), cur = v.currency;
+    const lines = s => ie(s).replace(/\n/g, '<br>');
+    return `
+      <div class="ip-top">
+        <div>${v.from.logo ? `<img class="ip-logo" src="${ie(v.from.logo)}" alt="">` : `<div class="ip-biz">${ie(v.from.name || 'Your business')}</div>`}</div>
+        <div class="ip-title"><div>INVOICE</div><span>${ie(v.number)}</span></div>
+      </div>
+      <div class="ip-parties">
+        <div><div class="ip-lbl">From</div><b>${ie(v.from.name || '—')}</b><br>${lines(v.from.address)}${v.from.address?'<br>':''}${ie(v.from.email)}${v.from.phone ? '<br>'+ie(v.from.phone) : ''}</div>
+        <div><div class="ip-lbl">Bill to</div><b>${ie(v.billTo.name || '—')}</b><br>${lines(v.billTo.address)}${v.billTo.address?'<br>':''}${ie(v.billTo.email)}</div>
+        <div class="ip-dates"><div><span>Issued</span>${ie(invDate(v.issueDate))}</div><div><span>Due</span>${ie(invDate(v.dueDate))}</div></div>
+      </div>
+      <table class="ip-table"><thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody>
+        ${v.items.filter(i => (i.desc||'').trim() || invNum(i.rate)).map(i => `<tr><td>${ie(i.desc || '—')}</td><td>${ie(invNum(i.qty))}</td><td>${ie(invMoney(i.rate, cur))}</td><td>${ie(invMoney(invNum(i.qty)*invNum(i.rate), cur))}</td></tr>`).join('') || '<tr><td colspan="4" style="color:#8c7d71;text-align:center;padding:18px">Add a line to get started</td></tr>'}
+      </tbody></table>
+      <div class="ip-totals">
+        <div><span>Subtotal</span>${ie(invMoney(t.sub, cur))}</div>
+        ${t.disc ? `<div><span>Discount (${ie(invNum(v.discountPct))}%)</span>-${ie(invMoney(t.disc, cur))}</div>` : ''}
+        ${t.tax ? `<div><span>Tax (${ie(invNum(v.taxPct))}%)</span>${ie(invMoney(t.tax, cur))}</div>` : ''}
+        <div class="ip-grand"><span>Total due</span>${ie(invMoney(t.total, cur))}</div>
+      </div>
+      ${v.payment ? `<div class="ip-block"><div class="ip-lbl">How to pay</div>${lines(v.payment)}</div>` : ''}
+      ${v.notes ? `<div class="ip-block"><div class="ip-lbl">Note</div>${lines(v.notes)}</div>` : ''}`;
+  }
+  function invUpdatePreview() { const p = document.getElementById('invPreview'); if (p && INV.cur) p.innerHTML = invPaperHtml(INV.cur.v); }
+
+  async function invSave(quiet) {
+    const c = INV.cur, v = c.v;
+    if (!(v.number||'').trim()) { showToast('Please give the invoice a number'); return false; }
+    const t = invTotals(v);
+    const row = { id: c.id || ('inv_' + Date.now() + '_' + Math.floor(Math.random()*1e6)), number: v.number.trim(), client: (v.billTo.name||'').trim(),
+      client_email: (v.billTo.email||'').trim(), status: c.status || 'draft', currency: v.currency, total: Math.round(t.total*100)/100,
+      issue_date: v.issueDate || null, due_date: v.dueDate || null, data: v, updated_at: new Date().toISOString() };
+    const { error } = await db.from('invoices').upsert(row, { onConflict: 'id' });
+    if (error) { showToast('Could not save: ' + error.message); return false; }
+    const i = INV.list.findIndex(x => x.id === row.id);
+    if (i >= 0) INV.list[i] = Object.assign(INV.list[i], row); else INV.list.unshift(Object.assign({ created_at: new Date().toISOString() }, row));
+    const firstSave = !c.id; c.id = row.id;
+    // remember your details and this client's email for next time
+    const p = INV.profile; p.business = JSON.parse(JSON.stringify(v.from)); p.payment = v.payment; p.notes = v.notes; p.currency = v.currency; p.taxPct = invNum(v.taxPct);
+    if (row.client) { p.clients = p.clients || {}; p.clients[row.client] = { email: row.client_email, address: v.billTo.address || '' }; }
+    await invSaveProfile();
+    if (!quiet) showToast('Invoice saved');
+    if (firstSave) invRenderEditor();
+    return true;
+  }
+  async function invTogglePaid() {
+    INV.cur.status = INV.cur.status === 'paid' ? 'sent' : 'paid';
+    if (await invSave(true)) { showToast(INV.cur.status === 'paid' ? 'Marked as paid 🎉' : 'Marked as unpaid'); invRenderEditor(); }
+  }
+  function invDelete() {
+    showConfirm('Delete invoice?', `${INV.cur.v.number} will be deleted for good.`, 'Delete', async () => {
+      const { error } = await db.from('invoices').delete().eq('id', INV.cur.id);
+      if (error) { showToast('Could not delete: ' + error.message); return; }
+      INV.list = INV.list.filter(x => x.id !== INV.cur.id); invBack(); showToast('Invoice deleted');
+    }, true);
+  }
+
+  // ---------- PDF ----------
+  let _jspdfLoading = null;
+  function invLoadPdfLib() {
+    if (window.jspdf) return Promise.resolve();
+    if (!_jspdfLoading) _jspdfLoading = new Promise((ok, fail) => {
+      const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      s.onload = ok; s.onerror = () => { _jspdfLoading = null; fail(new Error('Could not load the PDF maker. Check your internet and try again.')); };
+      document.head.appendChild(s);
+    });
+    return _jspdfLoading;
+  }
+  async function invBuildPdf(v) {
+    await invLoadPdfLib();
+    const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 48;
+    const RUST = [181,83,30], INK = [42,31,24], MUTED = [140,125,113], LINE = [232,222,210];
+    const t = invTotals(v), cur = v.currency, money = n => invMoney(n, cur, true);
+    let y = M;
+    doc.setFillColor(...RUST); doc.rect(0, 0, W, 6, 'F');
+    // logo or business name
+    if (v.from.logo) {
+      try { const p = doc.getImageProperties(v.from.logo); const h = 46, w = Math.min(160, p.width * h / p.height); doc.addImage(v.from.logo, 'JPEG', M, y, w, w * p.height / p.width); } catch (e) {}
+    } else { doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...INK); doc.text(v.from.name || '', M, y + 18); }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(26); doc.setTextColor(...RUST); doc.text('INVOICE', W - M, y + 22, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(...MUTED); doc.text(v.number || '', W - M, y + 40, { align: 'right' });
+    y += 80;
+    // parties + dates
+    const col = (x, label, name, rest) => {
+      let yy = y; doc.setFontSize(9); doc.setTextColor(...MUTED); doc.setFont('helvetica', 'bold'); doc.text(label.toUpperCase(), x, yy); yy += 15;
+      doc.setFontSize(11); doc.setTextColor(...INK); doc.text(doc.splitTextToSize(name || '—', 170), x, yy); yy += 15;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK);
+      rest.filter(Boolean).forEach(line => { doc.splitTextToSize(String(line), 170).forEach(l => { doc.text(l, x, yy); yy += 13; }); });
+      return yy;
+    };
+    const y1 = col(M, 'From', v.from.name, [...String(v.from.address||'').split('\n'), v.from.email, v.from.phone]);
+    const y2 = col(M + 190, 'Bill to', v.billTo.name, [...String(v.billTo.address||'').split('\n'), v.billTo.email]);
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...MUTED);
+    doc.text('ISSUED', W - M - 110, y); doc.text('DUE', W - M - 110, y + 34);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(...INK);
+    doc.text(invDate(v.issueDate), W - M - 110, y + 15); doc.text(invDate(v.dueDate), W - M - 110, y + 49);
+    y = Math.max(y1, y2, y + 60) + 22;
+    // items table
+    const cx = { desc: M + 10, qty: W - M - 210, price: W - M - 110, amt: W - M - 10 };
+    const header = () => { doc.setFillColor(251,238,229); doc.rect(M, y, W - 2*M, 26, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...RUST);
+      doc.text('Description', cx.desc, y + 17); doc.text('Qty', cx.qty, y + 17, { align: 'right' }); doc.text('Price', cx.price, y + 17, { align: 'right' }); doc.text('Amount', cx.amt, y + 17, { align: 'right' }); y += 26; };
+    header();
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    v.items.filter(i => (i.desc||'').trim() || invNum(i.rate)).forEach(i => {
+      const lines = doc.splitTextToSize(i.desc || '—', cx.qty - cx.desc - 40), h = Math.max(26, lines.length * 13 + 13);
+      if (y + h > H - 120) { doc.addPage(); y = M; header(); doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(...INK); }
+      doc.text(lines, cx.desc, y + 17); doc.text(String(invNum(i.qty)), cx.qty, y + 17, { align: 'right' });
+      doc.text(money(i.rate), cx.price, y + 17, { align: 'right' }); doc.text(money(invNum(i.qty)*invNum(i.rate)), cx.amt, y + 17, { align: 'right' });
+      y += h; doc.setDrawColor(...LINE); doc.line(M, y, W - M, y);
+    });
+    // totals
+    if (y > H - 200) { doc.addPage(); y = M; }
+    y += 18;
+    const tot = (label, val, big) => { doc.setFont('helvetica', big ? 'bold' : 'normal'); doc.setFontSize(big ? 13 : 10.5); doc.setTextColor(...(big ? INK : MUTED));
+      doc.text(label, W - M - 190, y); doc.setTextColor(...INK); doc.text(val, W - M - 10, y, { align: 'right' }); y += big ? 24 : 18; };
+    tot('Subtotal', money(t.sub));
+    if (t.disc) tot(`Discount (${invNum(v.discountPct)}%)`, '-' + money(t.disc));
+    if (t.tax) tot(`Tax (${invNum(v.taxPct)}%)`, money(t.tax));
+    doc.setDrawColor(...RUST); doc.setLineWidth(1.2); doc.line(W - M - 190, y - 8, W - M, y - 8); doc.setLineWidth(0.5); y += 8;
+    tot('Total due', money(t.total), true);
+    // payment + notes
+    y += 10;
+    const block = (label, text) => { if (!text) return; const lines = doc.splitTextToSize(String(text), W - 2*M);
+      if (y + 30 + lines.length*13 > H - M) { doc.addPage(); y = M; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...MUTED); doc.text(label.toUpperCase(), M, y); y += 15;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(lines, M, y); y += lines.length * 13 + 14; };
+    block('How to pay', v.payment); block('Note', v.notes);
+    return doc;
+  }
+  function invFileName(v) { return `${(v.number||'invoice').replace(/[^\w\-]+/g,'_')}${v.billTo.name ? '_' + v.billTo.name.replace(/[^\w\-]+/g,'_') : ''}.pdf`; }
+  async function invDownload() {
+    try { showToast('Preparing PDF…'); const doc = await invBuildPdf(INV.cur.v); doc.save(invFileName(INV.cur.v)); showToast('PDF downloaded'); }
+    catch (e) { showToast(e.message || 'Could not make the PDF'); }
+  }
+  async function invEmail() {
+    const v = INV.cur.v, to = (v.billTo.email || '').trim();
+    if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(to)) { showToast('Add the client\'s email in "Bill to" first'); document.querySelector('[data-k="billTo.email"]')?.focus(); return; }
+    if (!(await invSave(true))) return;
+    const t = invTotals(v);
+    const subject = `Invoice ${v.number} from ${v.from.name || 'us'}`;
+    const message = `Hi ${v.billTo.name || 'there'},\n\nPlease find attached invoice ${v.number} for ${invMoney(t.total, v.currency)}, due on ${invDate(v.dueDate)}.\n\n${v.payment ? 'How to pay:\n' + v.payment + '\n\n' : ''}Thank you!\n${v.from.name || ''}`;
+    let doc;
+    try { showToast('Preparing email…'); doc = await invBuildPdf(v); } catch (e) { showToast(e.message); return; }
+    let res = null;
+    try {
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+      const r = await db.functions.invoke('send-invoice', { body: { to, replyTo: v.from.email, subject, message, filename: invFileName(v), pdfBase64, business: v.from.name } });
+      res = r.error ? { error: (r.data && r.data.error) || r.error.message } : r.data;
+    } catch (e) { res = { error: 'not_configured' }; }
+    if (res && res.ok) {
+      INV.cur.status = INV.cur.status === 'paid' ? 'paid' : 'sent'; await invSave(true); invRenderEditor();
+      showToast(`Invoice emailed to ${to} ✓`); return;
+    }
+    if (res && res.error && res.error !== 'not_configured') { showToast('Email failed: ' + res.error); return; }
+    // No email service set up yet: hand over to the user's own email app
+    doc.save(invFileName(v));
+    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    INV.cur.status = INV.cur.status === 'paid' ? 'paid' : 'sent'; await invSave(true); invRenderEditor();
+    showConfirm('Almost done ✉', `Your email app is opening with the message ready for ${to}. The invoice PDF was just downloaded — attach it (it's in your Downloads folder) and press Send.`, 'Got it', () => {}, false);
   }
 
   async function init() {

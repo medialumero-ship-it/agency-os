@@ -17,6 +17,14 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 - **Reset someone's password:** ⚙ Settings → type a new one next to their name → Update. Passwords are stored scrambled, so the old one can't be shown.
 - After 10 wrong passwords in a row, that login is paused for 15 minutes.
 
+## Invoices (admin only)
+
+- Open the **Invoices** tab, then click **＋ New invoice**. Fill in the client, the lines and your payment details. The preview on the right shows exactly what the client will get.
+- **＋ Add finished projects** adds that client's *Done* projects for the selected month as invoice lines.
+- **⬇ Download PDF** saves the invoice to your computer.
+- **✉ Email to client** sends the PDF straight to the client's inbox once email sending is set up (see Technical notes). Until then, it downloads the PDF and opens your own email app with the message written for you; just attach the PDF and press Send.
+- Your business details, payment info and each client's email are remembered for next time. Mark invoices as **paid** to keep the totals at the top correct.
+
 ## Who sees what
 
 | | Admin | Editor | Client |
@@ -33,4 +41,5 @@ These rules are enforced by the database, not just hidden on screen.
 - `index.html`: the whole app, hosted free on GitHub Pages.
 - `supabase/schema.sql`: database tables and access rules. You can run it again safely.
 - `supabase/functions/ai-robot`: the AI robot. It only answers signed-in users. It needs an `OPENAI_API_KEY` secret in Supabase (Edge Functions → Secrets).
+- `supabase/functions/send-invoice`: emails invoices with the PDF attached, using Resend (resend.com). To turn it on, add two secrets in Supabase (Edge Functions → Secrets): `RESEND_API_KEY`, and `INVOICE_FROM` (for example `Your Agency <invoices@youragency.com>`, on a domain you've verified in Resend).
 - The Supabase URL and public key in `index.html` are meant to be public. The database rules keep the data safe.
