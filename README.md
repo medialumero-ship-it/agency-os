@@ -67,11 +67,14 @@ Your agency's CRM: projects, editors, clients, leaderboard and finance in one pa
 These rules are enforced by the database, not just hidden on screen. Editors and clients never receive the hidden information at all, even through the browser's developer tools.
 
 **Other protections**
-- Passwords are scrambled and kept in a table no one can read, not even the admin's browser.
-- After 10 wrong passwords, that login pauses for 15 minutes.
-- Logins last 30 days. Resetting someone's password or deleting their account signs them out everywhere at once.
+- Editors see full details only for **their own** projects. For other editors' projects they get just the name, status and minutes the leaderboard needs: no titles, notes, links or dates.
+- Passwords need at least 8 characters. They're scrambled and kept in a table no one can read, not even the admin's browser.
+- Wrong passwords: 5 tries per browser every 15 minutes, and 20 per account from new browsers. A browser that has signed in to an account before is never locked out by other people's guessing.
+- Admin logins last 7 days, others 30. Resetting someone's password or deleting their account signs them out everywhere at once.
 - Anything editors or clients type is checked by the database (IDs, statuses, dates, minutes) and shown as plain text, so it can't run code on the admin's screen.
-- The page only talks to your own database, and other websites can't embed it.
+- The page loads its code only from this site (`vendor/`, with fingerprint checks), talks only to your own database, and can't be embedded by other websites. Email and phone sign-up are switched off in Supabase.
+
+**What software can't stop:** an editor sees the footage they edit, so a logo or brand in the video itself is visible to them. Keep client names out of project titles, notes, file names and shared-folder names (use a code like "NW-014" instead).
 
 ## Technical notes
 

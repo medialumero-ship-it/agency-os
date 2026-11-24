@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://uxzcfocvkqlxhosdkxec.supabase.co wss://uxzcfocvkqlxhosdkxec.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://uxzcfocvkqlxhosdkxec.supabase.co wss://uxzcfocvkqlxhosdkxec.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
 <title>Agency OS — CRM</title>
@@ -1448,7 +1448,7 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="vendor/supabase.min.js" integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"></script>
 <script>
   // Public project URL + publishable key (safe to be public — the database rules protect the data)
   const SUPABASE_URL = 'https://uxzcfocvkqlxhosdkxec.supabase.co';
@@ -2051,7 +2051,21 @@
     events.forEach(([t, p]) => _applyRemote(t, p));
   }
 
+  // If a live update arrives without its data (it happens for a moment right after signing in),
+  // don't guess: reload everything shortly instead, once nobody is mid-edit.
+  let _reloadTimer = null;
+  function _scheduleFullReload() {
+    if (_reloadTimer) return;
+    _reloadTimer = setTimeout(async () => {
+      _reloadTimer = null;
+      if (isSaving || pendingSave || document.querySelector('.cell-input') || (_lastSaved && JSON.stringify(data.rows) !== JSON.stringify(_lastSaved.rows))) { _scheduleFullReload(); return; }
+      if (await loadData()) _queueRender();
+    }, 3000);
+  }
   function _onRemote(table, payload) {
+    const keyOf = { individuals: 'name', period_settings: 'period' };
+    const k = keyOf[table] || 'id', rec = payload && (payload.eventType === 'DELETE' ? payload.old : payload.new);
+    if (!payload || (payload.errors && payload.errors.length) || !rec || rec[k] == null || rec[k] === '') { _scheduleFullReload(); return; }
     if (isSaving || pendingSave) {
       _pendingRemoteEvents.push([table, payload]);
       return;
@@ -2386,7 +2400,7 @@
     const err = document.getElementById('loginError');
     err.classList.remove('show');
     if (!name) { err.textContent = 'Please enter your brand name.'; err.classList.add('show'); return; }
-    if (!pass || pass.length < 3) { err.textContent = 'Password must be at least 3 characters.'; err.classList.add('show'); return; }
+    if (!pass || pass.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.classList.add('show'); return; }
     if ((data.clientAccounts || []).find(a => a.name.toLowerCase() === name.toLowerCase())) {
       err.textContent = 'That brand name is already taken.'; err.classList.add('show'); return;
     }
@@ -2422,7 +2436,7 @@
     err.classList.remove('show');
     if (!name) { err.textContent = 'Please enter your name.'; err.classList.add('show'); return; }
     if (!pass) { err.textContent = 'Please choose a password.'; err.classList.add('show'); return; }
-    if (pass.length < 3) { err.textContent = 'Password must be at least 3 characters.'; err.classList.add('show'); return; }
+    if (pass.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.classList.add('show'); return; }
     // Check if name already taken
     if ((data.editorAccounts || []).find(a => a.name.toLowerCase() === name.toLowerCase())) {
       err.textContent = 'That name is already taken.'; err.classList.add('show'); return;
@@ -2446,7 +2460,7 @@
   function logout() {
     stopAutoRefresh(); clearSession();
     // End the database session too, then reload so no CRM data stays in this tab's memory
-    db.rpc('crm_logout').then(() => db.auth.signOut()).catch(() => {}).finally(() => location.reload());
+    db.rpc('crm_logout').then(() => {}, () => {}).then(() => location.reload());
     if (typeof stopFloatRobot === 'function') stopFloatRobot();
     if (typeof stopAdminRobot === 'function') { stopAdminRobot(); closeAdminSummary(); }
     document.getElementById('mainApp').style.display = 'none';
@@ -4012,9 +4026,9 @@
     const editorOrder = [];
     (pTeams || []).forEach(t => {
       if (t.leader && !editorOrder.includes(t.leader)) editorOrder.push(t.leader);
-      (t.members || []).forEach(m => { if (!editorOrder.includes(m)) editorOrder.push(m); });
+      (t.members || []).forEach(m => { if (m && !editorOrder.includes(m)) editorOrder.push(m); });
     });
-    (pIndivs || []).forEach(m => { if (!editorOrder.includes(m)) editorOrder.push(m); });
+    (pIndivs || []).forEach(m => { if (m && !editorOrder.includes(m)) editorOrder.push(m); });
 
     // Team color lookup for the avatar accent
     const teamColor = {};
@@ -7271,7 +7285,7 @@
   }
   async function changeMyClientPass() {
     const v = (document.getElementById('myClientPassInput').value || '').trim();
-    if (!v || v.length < 3) { showToast('Password must be at least 3 characters'); return; }
+    if (!v || v.length < 8) { showToast('Password must be at least 8 characters'); return; }
     const acct = (data.clientAccounts || []).find(a => a.name === clientName());
     if (!acct) { showToast('Account not found'); return; }
     pushUndo(); acct.password = v; await saveData(); showToast('Password updated');
@@ -7466,7 +7480,7 @@
   }
   async function changeMyPass() {
     const v = (document.getElementById('myPassInput').value || '').trim();
-    if (!v || v.length < 3) { showToast('Password must be at least 3 characters'); return; }
+    if (!v || v.length < 8) { showToast('Password must be at least 8 characters'); return; }
     const acct = (data.editorAccounts || []).find(a => a.name === editorName());
     if (!acct) { showToast('Account not found'); return; }
     pushUndo(); acct.password = v; await saveData(); showToast('Password updated');
@@ -7479,14 +7493,14 @@
     const accts = data.editorAccounts || [];
     if (!accts[idx]) return;
     const v = document.getElementById('acctPass_'+idx).value.trim();
-    if (!v || v.length < 3) { showToast('Password must be at least 3 characters'); return; }
+    if (!v || v.length < 8) { showToast('Password must be at least 8 characters'); return; }
     pushUndo(); accts[idx].password = v; await saveData(); showToast(accts[idx].name + "'s password updated");
   }
   async function resetClientPass(idx) {
     const clients = data.clientAccounts || [];
     if (!clients[idx]) return;
     const v = document.getElementById('clientPass_'+idx).value.trim();
-    if (!v || v.length < 3) { showToast('Password must be at least 3 characters'); return; }
+    if (!v || v.length < 8) { showToast('Password must be at least 8 characters'); return; }
     pushUndo(); clients[idx].password = v; await saveData(); showToast(clients[idx].name + "'s password updated");
   }
   function deleteEditorAccount(idx) {
@@ -7520,7 +7534,7 @@
     const name = (nameInput.value || '').trim();
     const pass = (passInput.value || '').trim();
     if (!name) { showToast('Enter a brand name'); return; }
-    if (!pass || pass.length < 3) { showToast('Password must be at least 3 characters'); return; }
+    if (!pass || pass.length < 8) { showToast('Password must be at least 8 characters'); return; }
     if ((data.clientAccounts || []).find(a => a.name.toLowerCase() === name.toLowerCase())) {
       showToast('That brand name already exists'); return;
     }
@@ -8252,7 +8266,7 @@
   function invLoadPdfLib() {
     if (window.jspdf) return Promise.resolve();
     if (!_jspdfLoading) _jspdfLoading = new Promise((ok, fail) => {
-      const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      const s = document.createElement('script'); s.src = 'vendor/jspdf.umd.min.js'; s.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk';
       s.onload = ok; s.onerror = () => { _jspdfLoading = null; fail(new Error('Could not load the PDF maker. Check your internet and try again.')); };
       document.head.appendChild(s);
     });

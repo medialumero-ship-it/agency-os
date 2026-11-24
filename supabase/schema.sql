@@ -107,13 +107,17 @@ create table if not exists crm_login_attempts (id bigint generated always as ide
 create index if not exists crm_login_attempts_who on crm_login_attempts (who, at);
 -- Scrambled passwords live here, never in a table the app can read
 create table if not exists crm_passwords (role text not null, name text not null, hash text not null, primary key (role, name));
+-- Browsers that have signed in successfully before (used so a lockout can't shut out the real person)
+create table if not exists crm_trusted_devices (uid uuid not null, role text not null, name text not null default '', last_ok timestamptz default now(), primary key (uid, role, name));
+alter table crm_login_attempts add column if not exists uid uuid;
 
 -- ───────────── Who is signed in ─────────────
 -- A login lasts 30 days, and ends at once if the person's account is removed.
 create or replace function crm_role() returns text
 language sql stable security definer set search_path = public as $$
   select s.role from crm_sessions s
-  where s.uid = auth.uid() and s.created_at > now() - interval '30 days'
+  where s.uid = auth.uid()
+    and s.created_at > now() - case when s.role = 'admin' then interval '7 days' else interval '30 days' end
     and (s.role = 'admin'
       or (s.role = 'editor' and exists (select 1 from editor_accounts a where a.name = s.name))
       or (s.role = 'client' and exists (select 1 from client_accounts a where a.name = s.name)))
@@ -134,8 +138,15 @@ declare
 begin
   if auth.uid() is null then raise exception 'Not connected. Refresh the page.'; end if;
   if p_role not in ('admin', 'editor', 'client') or length(coalesce(p_pass, '')) > 200 then return null; end if;
-  if (select count(*) from crm_login_attempts where who = v_who and at > now() - interval '15 minutes') >= 10 then
+  -- this browser: 5 wrong tries per 15 minutes
+  if (select count(*) from crm_login_attempts where uid = auth.uid() and at > now() - interval '15 minutes') >= 5 then
     raise exception 'Too many wrong tries. Wait 15 minutes and try again.';
+  end if;
+  -- this account from anywhere: 20 per 15 minutes, unless this browser has signed in to it before
+  if (select count(*) from crm_login_attempts where who = v_who and at > now() - interval '15 minutes') >= 20
+     and not exists (select 1 from crm_trusted_devices t where t.uid = auth.uid() and t.role = p_role
+                     and lower(t.name) = lower(coalesce(trim(p_name), '')) and t.last_ok > now() - interval '90 days') then
+    raise exception 'Too many wrong tries on this account. Wait 15 minutes and try again.';
   end if;
   if p_role = 'admin' then
     select true into v_ok from crm_secrets where key = 'admin_pass' and value = crypt(p_pass, value);
@@ -148,10 +159,12 @@ begin
     v_ok := v_name is not null;
   end if;
   if not coalesce(v_ok, false) then
-    insert into crm_login_attempts (who) values (v_who);
+    insert into crm_login_attempts (who, uid) values (v_who, auth.uid());
     return null;
   end if;
-  delete from crm_login_attempts where who = v_who or at < now() - interval '1 day';
+  delete from crm_login_attempts where (who = v_who and uid = auth.uid()) or at < now() - interval '1 day';
+  insert into crm_trusted_devices (uid, role, name, last_ok) values (auth.uid(), p_role, lower(coalesce(trim(p_name), '')), now())
+    on conflict (uid, role, name) do update set last_ok = now();
   insert into crm_sessions (uid, role, name) values (auth.uid(), p_role, v_name)
     on conflict (uid) do update set role = excluded.role, name = excluded.name, created_at = now();
   return jsonb_build_object('role', p_role, 'name', v_name, 'mode', 'full');
@@ -194,7 +207,7 @@ begin
   if new.password is not null and new.password <> '' then
     if new.password ~ '^\$2[aby]\$\d\d\$.{53}$' then h := new.password;
     else
-      if length(new.password) < 3 then raise exception 'Password must be at least 3 characters'; end if;
+      if length(new.password) < 8 then raise exception 'Password must be at least 8 characters'; end if;
       if length(new.password) > 200 then raise exception 'Password is too long'; end if;
       h := crypt(new.password, gen_salt('bf'));
     end if;
@@ -217,6 +230,7 @@ declare r text := case tg_table_name when 'editor_accounts' then 'editor' else '
 begin
   delete from crm_passwords where role = r and name = old.name;
   delete from crm_sessions where role = r and name = old.name;
+  delete from crm_trusted_devices where role = r and name = lower(old.name);
   return old;
 end $$;
 drop trigger if exists forget_account on editor_accounts;
@@ -335,7 +349,7 @@ declare t text;
 begin
   foreach t in array array['settings','period_settings','columns','projects','teams','individuals',
     'editor_accounts','client_accounts','expenses','leads','project_bin','expense_bin','roster_history','invoices','work_log',
-    'project_pay','project_billing','client_rates','crm_secrets','crm_sessions','crm_login_attempts','crm_passwords'] loop
+    'project_pay','project_billing','client_rates','crm_secrets','crm_sessions','crm_login_attempts','crm_passwords','crm_trusted_devices'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists admin_all on %I', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -351,7 +365,7 @@ begin
   foreach t in array array['teams','individuals','roster_history'] loop
     execute format($p$create policy staff_read on %I for select to authenticated using (crm_role() = 'editor')$p$, t);
   end loop;
-  execute $p$create policy staff_read on columns for select to authenticated using (crm_role() in ('editor','client'))$p$;
+  execute $p$create policy staff_read on columns for select to authenticated using (crm_role() in ('editor','client') and not coalesce(admin_only, false))$p$;
 end $$;
 
 -- Projects: editors and clients never touch the table directly.
@@ -366,11 +380,16 @@ drop policy if exists client_insert on projects;
 
 create or replace function crm_editor_projects() returns setof jsonb
 language sql stable security definer set search_path = public as $$
+  -- their own projects: everything they work with (never client, money or points)
   select (to_jsonb(p) - 'client' - 'revenue' - 'revenue_gross' - 'revenue_source' - 'points' - 'point_calc'
           - 'created_by' - 'custom_fields')
          || jsonb_build_object('custom_fields', crm_safe_custom(p.custom_fields),
               'minutes_locked', exists (select 1 from project_billing b where b.project_id = p.id and b.billable_at is not null))
-  from projects p where crm_role() = 'editor' $$;
+  from projects p where crm_role() = 'editor' and p.editor = crm_name()
+  union all
+  -- everyone else's: only what the leaderboard and team view need (no titles, notes, links or dates)
+  select jsonb_build_object('id', p.id, 'period', p.period, 'editor', p.editor, 'status', p.status, 'minutes', p.minutes)
+  from projects p where crm_role() = 'editor' and p.editor is distinct from crm_name() $$;
 
 create or replace function crm_editor_save(p_rows jsonb) returns void
 language plpgsql security definer set search_path = public as $$
@@ -470,7 +489,7 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete on settings, period_settings, columns, projects, teams, individuals,
   editor_accounts, client_accounts, expenses, leads, project_bin, expense_bin, roster_history, invoices, work_log,
   project_pay, project_billing, client_rates to authenticated;
-revoke all on crm_secrets, crm_sessions, crm_login_attempts, crm_passwords from authenticated, anon;
+revoke all on crm_secrets, crm_sessions, crm_login_attempts, crm_passwords, crm_trusted_devices from authenticated, anon;
 -- Logged-out visitors get nothing
 revoke all on all tables in schema public from anon;
 
