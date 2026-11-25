@@ -3803,13 +3803,13 @@
       (team.members || []).forEach(name => {
         periodRowsAll.filter(r => r.editor === name).forEach(r => {
           const pts =rowMin(r);
-          if (r.status === 'Done') done += pts; else pipe += pts;
+          if (isDelivered(r)) done += pts; else pipe += pts;
         });
       });
       return { done, pipe };
     }
     const myTeamPts = teamPoints(myTeam);
-    // Find the rival team (the other team with the most done points)
+    // Find the rival team (the other team with the most delivered minutes)
     const otherTeams = teamsFor(pk).filter(t => t.id !== myTeam.id);
     let rival = null, rivalPts = { done: 0, pipe: 0 };
     otherTeams.forEach(t => {
@@ -3828,18 +3828,18 @@
     if (!rival) {
       cmpClass = 'tied';
       headline = `Your team is flying solo 🚀`;
-      sub = `${myDone} points done this period. No rival team to chase yet.`;
-      robotMsg = `Keep stacking those points!`;
+      sub = `${myDone} min delivered this period. No rival team to chase yet.`;
+      robotMsg = `Keep stacking those minutes!`;
     } else if (gap > 0 && absGap >= 40) {
       cmpClass = 'lead-strong';
-      headline = `You're crushing ${escapeHtml(rival.name)} by ${absGap} points 🔥`;
+      headline = `You're crushing ${escapeHtml(rival.name)} by ${absGap} min 🔥`;
       sub = `Dominant lead. Keep the pressure on and don't let up.`;
       robotMsg = `LEGENDARY. You're ${absGap} ahead. Absolute machines! 🏆`;
     } else if (gap > 0 && absGap >= 15) {
       cmpClass = 'lead-mid';
-      headline = `Ahead of ${escapeHtml(rival.name)} by ${absGap} points 💪`;
+      headline = `Ahead of ${escapeHtml(rival.name)} by ${absGap} min 💪`;
       sub = `Solid lead, but they're within striking distance. Finish your pipeline to seal it.`;
-      robotMsg = `Nice lead! Close out ${teamPipePts} pipeline pts to make it safe.`;
+      robotMsg = `Nice lead! Close out ${teamPipePts} min in progress to make it safe.`;
     } else if (gap > 0) {
       cmpClass = 'lead-mid';
       headline = `Barely ahead of ${escapeHtml(rival.name)} — by ${absGap} 😬`;
@@ -3852,13 +3852,13 @@
       robotMsg = `It's a TIE. Next point wins the lead. GO!`;
     } else if (absGap <= 15) {
       cmpClass = 'behind';
-      headline = `Behind ${escapeHtml(rival.name)} by ${absGap} points`;
-      sub = `You've got ${teamPipePts} pts in pipeline. Finishing those puts you ${teamPipePts - absGap >= 0 ? (teamPipePts - absGap) + ' ahead' : 'right back in it'}.`;
+      headline = `Behind ${escapeHtml(rival.name)} by ${absGap} min`;
+      sub = `You've got ${teamPipePts} min in progress. Finishing those puts you ${teamPipePts - absGap >= 0 ? (teamPipePts - absGap) + ' ahead' : 'right back in it'}.`;
       robotMsg = teamPipePts >= absGap ? `Finish your pipeline and you OVERTAKE them! 🚀` : `Only ${absGap} behind. You've got this!`;
     } else {
       cmpClass = 'behind';
-      headline = `Trailing ${escapeHtml(rival.name)} by ${absGap} points`;
-      sub = `Big gap, but ${teamPipePts} pts are still in your pipeline. Every finish counts.`;
+      headline = `Trailing ${escapeHtml(rival.name)} by ${absGap} min`;
+      sub = `Big gap, but ${teamPipePts} min are still in progress. Every finish counts.`;
       robotMsg = `Time to lock in. ${absGap} to catch. Let's move! 💢`;
     }
 
@@ -3908,7 +3908,7 @@
       }
       html += `<div class="pulse-header">
           <span class="pulse-header-title">Your teammates this period</span>
-          <span class="pulse-header-sub">${teamDonePts} done · ${teamPipePts} in pipeline</span>
+          <span class="pulse-header-sub">${teamDonePts} min delivered · ${teamPipePts} min in progress</span>
         </div>`;
       mateData.forEach(m => {
         const initial = m.name[0].toUpperCase();
